@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from "recharts";
+import * as XLSX from "xlsx";
 
 const NAVY = "#012750";
 const BLUE = "#245FA5";
@@ -226,12 +227,15 @@ function TabCrearSub() {
   ];
   const totalMonthlyFiltered = filtered.reduce((s, r) => s + r[5], 0);
   const [csvData,setCsvData]=useState(null);
-  const dlCSV=()=>{const hd=["Cliente","Empresa","Ejec.Cobro","Owner CRM","Frec.Hist","Gap Esp.","Gap Actual","Prom/Mes","Ult.Fact","Meses Hist","Activos","Sub Prev","Accion CRM","# Cancel"];const esc=v=>{const s=String(v??"");return s.includes(",")||s.includes('"')||s.includes("\n")?'"'+s.replace(/"/g,'""')+'"':s;};const rows=filtered.map(r=>{const x=_gx(r[0]);const emp=x?(_EM[x[0]]||""):"";const ej=x?_pn(x[1]):"";const ow=x?_pn(x[2]):"";const act=_TD[r[0]]||"0";const sp=r[8]?"Si":"No";const cc=r[9]?"Cand.Cancel":"";const accion=r[10]===3?"BAJA DEF.":cc||(_CS[r[10]]||"");return[r[0],emp,ej,ow,r[2],r[3],r[4],r[5],r[6],r[7],act,sp,accion,r[11]].map(esc).join("\t");});setCsvData(hd.join("\t")+"\n"+rows.join("\n"));};
+  const _buildRows=(data)=>{const hd=["Cliente","Empresa","Ejec.Cobro","Owner CRM","Frec.Hist","Gap Esp.","Gap Actual","Prom/Mes","Ult.Fact","Meses Hist","Activos","Sub Prev","Accion CRM","# Cancel"];const rows=data.map(r=>{const x=_gx(r[0]);const emp=x?(_EM[x[0]]||""):"";const ej=x?_pn(x[1]):"";const ow=x?_pn(x[2]):"";const act=_TD[r[0]]||0;const sp=r[8]?"Si":"No";const cc=r[9]?"Cand.Cancel":"";const accion=r[10]===3?"BAJA DEF.":cc||(_CS[r[10]]||"");return[r[0],emp,ej,ow,r[2],r[3],r[4],r[5],r[6],r[7],act,sp,accion,r[11]];});return{hd,rows};};
+  const dlCSV=()=>{const{hd,rows}=_buildRows(filtered);const esc=v=>{const s=String(v??"");return s.includes(",")||s.includes('"')||s.includes("\n")?'"'+s.replace(/"/g,'""')+'"':s;};setCsvData(hd.map(esc).join("\t")+"\n"+rows.map(r=>r.map(esc).join("\t")).join("\n"));};
+  const dlExcel=()=>{const{hd,rows}=_buildRows(filtered);const ws=XLSX.utils.aoa_to_sheet([hd,...rows]);ws["!cols"]=hd.map((_,i)=>({wch:i===0?40:i===7?14:12}));const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Crear Suscripcion");XLSX.writeFile(wb,"crear_suscripcion.xlsx");};
   return (
     <div>
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 14, alignItems: "flex-end" }}>
         <KPI label="Clientes sin Suscripcion" value={filtered.length} sub={filtered.length === CS.length ? "total en riesgo" : `de ${CS.length} (filtrado)`} color="#F39C12" />
         <KPI label="Ingreso Mensual en Riesgo" value={fmtK(totalMonthlyFiltered)} sub="sin proteccion de suscripcion" color="#F39C12" />
+        <button onClick={dlExcel} style={{padding:"8px 16px",borderRadius:8,border:"none",background:"#1a7f4b",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",height:40,display:"flex",alignItems:"center",gap:6}}>&#x1F4E5; Excel ({filtered.length})</button>
         <button onClick={dlCSV} style={{padding:"8px 16px",borderRadius:8,border:"none",background:"#27AE60",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",height:40,display:"flex",alignItems:"center",gap:6}}>&#x1F4CB; Copiar ({filtered.length})</button>
       </div>
       {csvData&&<div style={{background:"#fff",border:"2px solid #27AE60",borderRadius:8,padding:10,marginBottom:10}}>
