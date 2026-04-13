@@ -368,7 +368,7 @@ function TabMetodologia() {
   </div>);
 }
 
-export default function AccionesClientes() {
+export default function AccionesClientes({ userEmail, onLogout }) {
   const [tab, setTab] = useState(0);
   const [loaded, setLoaded] = useState(false);
   useEffect(() => {
@@ -398,6 +398,10 @@ export default function AccionesClientes() {
             <div style={{fontSize:18,fontWeight:700,color:NAVY}}>Plan de Acciones - Clientes sin Facturacion</div>
             <div style={{fontSize:11,color:"#888"}}>27 masters excluidos | Filtro: ACTIVO + Cliente | ${new Date().toLocaleDateString('es-MX')}</div>
           </div>
+          {userEmail && <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <span style={{fontSize:11,color:"#888"}}>{userEmail}</span>
+            <button onClick={onLogout} style={{padding:"5px 12px",borderRadius:6,border:"1px solid #ddd",background:"#fff",color:"#666",fontSize:11,cursor:"pointer",fontWeight:600}}>Salir</button>
+          </div>}
         </div>
         <div style={{ display: "flex", gap: 4, marginBottom: 16, flexWrap: "wrap" }}>
           {TABS.map((t, i) => (
