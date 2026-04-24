@@ -412,12 +412,150 @@ function TabExcParent() {
   </div>);
 }
 function TabMetodologia() {
-  const S={h:{fontWeight:700,fontSize:13,color:NAVY,marginTop:12,marginBottom:6},b:(bg,bd)=>({background:bg,border:"1px solid "+bd,borderRadius:8,padding:10,marginBottom:8,fontSize:11,lineHeight:1.5})};
-  return(<div style={{maxWidth:700}}>
-    <div style={S.h}>1. Universo</div><div style={S.b("#EBF5FB","#AED6F1")}>account_type=Cliente, status=ACTIVO, sin factura mes actual.</div>
-    <div style={S.h}>2. Exclusion</div><div style={S.b("#FDF2E9","#F5CBA7")}>Masters con hijos que facturan.</div>
-    <div style={S.h}>3. Clasificacion</div><div style={S.b("#E8F8F5","#A3E4D7")}>Sub: next_billing NULL=REVISAR. Sin sub+fact: gap=CrearSub/Preventivo. Paused=Reanudar. Expired=Renovar.</div>
-    <div style={S.h}>4. Cand.Cancel</div><div style={S.b("#FDEDEC","#F5B7B1")}>Mensual&gt;4m, Bim&gt;4m, Trim&gt;6m, Sem&gt;7m, Anual&gt;13m sin factura.</div>
+  const card={background:"#fff",borderRadius:12,padding:"18px 20px",boxShadow:"0 2px 12px rgba(1,39,80,.06)",marginBottom:14};
+  const stepNum=(n,color)=>({display:"inline-flex",alignItems:"center",justifyContent:"center",width:28,height:28,borderRadius:8,background:color,color:"#fff",fontSize:12,fontWeight:700,marginRight:10,flexShrink:0});
+  const stepTitle={fontSize:14,fontWeight:700,color:NAVY,display:"flex",alignItems:"center",marginBottom:10};
+  const sub={fontSize:12,fontWeight:600,color:MID_NAVY,marginTop:10,marginBottom:4};
+  const body={fontSize:11,color:"#555",lineHeight:1.7};
+  const pill=(bg,color,text)=><span style={{display:"inline-block",padding:"2px 8px",borderRadius:12,fontSize:9,fontWeight:700,background:bg,color:color,marginRight:4,marginBottom:2}}>{text}</span>;
+  const rule=(label,val)=><div style={{display:"flex",justifyContent:"space-between",padding:"4px 0",borderBottom:"1px solid #f0f4f8",fontSize:11}}><span style={{color:"#666"}}>{label}</span><span style={{fontWeight:600,color:NAVY}}>{val}</span></div>;
+  const divider=<div style={{height:1,background:`linear-gradient(90deg, ${BLUE}22, transparent)`,margin:"12px 0"}}/>;
+
+  return(<div style={{maxWidth:780}}>
+    {/* Intro */}
+    <div style={{...card,background:GRAD,color:"#fff",padding:"20px 24px"}}>
+      <div style={{fontSize:16,fontWeight:700,marginBottom:6}}>Metodología del Plan de Acciones</div>
+      <div style={{fontSize:12,opacity:.8,lineHeight:1.6}}>
+        Este dashboard identifica automáticamente clientes activos que no están facturando correctamente y los clasifica en acciones específicas para el equipo de cobranza. Los datos se actualizan en tiempo real desde Zoho Books, Billing y CRM vía Supabase.
+      </div>
+    </div>
+
+    {/* Paso 1 */}
+    <div style={card}>
+      <div style={stepTitle}><span style={stepNum("1","#3498DB")}>1</span>Universo de Clientes</div>
+      <div style={body}>
+        Se parte de todas las cuentas registradas en Zoho CRM que cumplen los siguientes criterios simultáneamente:
+      </div>
+      <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:8}}>
+        {pill("#EBF5FB","#2471A3","account_type = Cliente")}
+        {pill("#EBF5FB","#2471A3","status = ACTIVO")}
+        {pill("#FEF9E7","#B7950B","Sin factura en el mes actual")}
+      </div>
+      <div style={sub}>Fuentes de datos</div>
+      <div style={body}>
+        <b>Zoho Books:</b> Facturas, suscripciones (frecuencia, next_billing_date, status). <b>Zoho CRM:</b> Cuentas (account_type, status, owner, parent_account, empresa_numaris). <b>Zoho Billing:</b> Historial de pagos y suscripciones complementarias.
+      </div>
+      {divider}
+      <div style={sub}>Vinculación Books ↔ CRM</div>
+      <div style={body}>
+        Cada cliente CRM se busca primero en la tabla <code style={{background:"#f0f4f8",padding:"1px 4px",borderRadius:3,fontSize:10}}>customers</code> de Zoho Books (campo <b>company_name</b>). Si existe match, se extrae la empresa Numaris, el ejecutivo de cobro y el owner. Si no hay match en Books ("Sin Books"), se toma la empresa desde el campo <b>empresa_numaris</b> del CRM como fallback.
+      </div>
+    </div>
+
+    {/* Paso 2 */}
+    <div style={card}>
+      <div style={stepTitle}><span style={stepNum("2","#E67E22")}>2</span>Exclusiones</div>
+      <div style={body}>Antes de clasificar, se excluyen cuentas que no deben accionarse directamente:</div>
+      <div style={{marginTop:8}}>
+        {rule("Masters con hijos","Cuentas padre (parent) cuyos hijos sí facturan — se reportan en pestaña 'Excluidos (Masters)'")}
+        {rule("Hijos de parent","Cuentas con parent_account asignado — se reportan en pestaña 'Excluir (Parent)'")}
+        {rule("Razones sociales anteriores","Cuentas con '(antes...)' que facturan bajo otra razón social")}
+      </div>
+      <div style={{...body,marginTop:8}}>
+        Los masters excluidos se subdividen según la acción que les correspondería: {pill("#E74C3C18","#E74C3C","Revisar Subs")} {pill("#F39C1218","#F39C12","Crear Sub")} {pill("#7F8C8D18","#7F8C8D","Escalar")}
+      </div>
+    </div>
+
+    {/* Paso 3 */}
+    <div style={card}>
+      <div style={stepTitle}><span style={stepNum("3","#27AE60")}>3</span>Clasificación de Acciones</div>
+      <div style={body}>Cada cliente del universo se asigna a exactamente una categoría según su estado de suscripción y facturación:</div>
+      <div style={{marginTop:10}}>
+        {rule("Revisar Configuración","Tiene suscripción activa pero next_billing_date = NULL → la configuración de cobro está incompleta")}
+        {rule("Contratos Especiales","Suscripción con frecuencia > 1 año (leasing, arrendamiento) → next_billing NULL es esperado, validar mecanismo")}
+        {rule("Crear Suscripción","No tiene suscripción activa, tiene historial de facturación → se debe crear suscripción nueva")}
+        {rule("Crear Sub (Preventivo)","Tiene historial, está dentro de su ciclo normal pero sin suscripción → proteger antes de que venza")}
+        {rule("Reanudar","Tiene suscripción en status 'paused' → reactivar la suscripción existente")}
+        {rule("Renovar","Tiene suscripción en status 'expired' → crear nueva suscripción basada en la anterior")}
+        {rule("Escalar","Sin historial de facturación ni suscripción → requiere investigación del equipo comercial")}
+        {rule("OK Sub Vigente","Tiene suscripción activa con next_billing válido → no requiere acción")}
+      </div>
+    </div>
+
+    {/* Paso 4 */}
+    <div style={card}>
+      <div style={stepTitle}><span style={stepNum("4","#E74C3C")}>4</span>Candidato a Cancelación</div>
+      <div style={body}>
+        Sobre la categoría "Crear Suscripción", se aplica un segundo filtro para identificar clientes cuyo gap de facturación supera el umbral esperado según su frecuencia histórica. Estos se marcan como <b>Cand.Cancel</b> porque podrían ya no estar operando:
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:0,marginTop:10,borderRadius:8,overflow:"hidden",border:"1px solid #fde2e2"}}>
+        <div style={{background:NAVY,color:"#fff",padding:"6px 12px",fontSize:10,fontWeight:600}}>Frecuencia</div>
+        <div style={{background:NAVY,color:"#fff",padding:"6px 12px",fontSize:10,fontWeight:600}}>Umbral sin factura</div>
+        <div style={{padding:"6px 12px",fontSize:11,background:"#fff",borderBottom:"1px solid #f8f8f8"}}>Mensual</div>
+        <div style={{padding:"6px 12px",fontSize:11,fontWeight:600,color:"#E74C3C",background:"#fff",borderBottom:"1px solid #f8f8f8"}}>&gt; 4 meses</div>
+        <div style={{padding:"6px 12px",fontSize:11,background:"#fafafa",borderBottom:"1px solid #f8f8f8"}}>Bimestral</div>
+        <div style={{padding:"6px 12px",fontSize:11,fontWeight:600,color:"#E74C3C",background:"#fafafa",borderBottom:"1px solid #f8f8f8"}}>&gt; 4 meses</div>
+        <div style={{padding:"6px 12px",fontSize:11,background:"#fff",borderBottom:"1px solid #f8f8f8"}}>Trimestral</div>
+        <div style={{padding:"6px 12px",fontSize:11,fontWeight:600,color:"#E74C3C",background:"#fff",borderBottom:"1px solid #f8f8f8"}}>&gt; 6 meses</div>
+        <div style={{padding:"6px 12px",fontSize:11,background:"#fafafa",borderBottom:"1px solid #f8f8f8"}}>Semestral</div>
+        <div style={{padding:"6px 12px",fontSize:11,fontWeight:600,color:"#E74C3C",background:"#fafafa",borderBottom:"1px solid #f8f8f8"}}>&gt; 7 meses</div>
+        <div style={{padding:"6px 12px",fontSize:11,background:"#fff"}}>Anual</div>
+        <div style={{padding:"6px 12px",fontSize:11,fontWeight:600,color:"#E74C3C",background:"#fff"}}>&gt; 13 meses</div>
+      </div>
+    </div>
+
+    {/* Paso 5 */}
+    <div style={card}>
+      <div style={stepTitle}><span style={stepNum("5","#8E44AD")}>5</span>Acciones CRM (Cancelaciones)</div>
+      <div style={body}>
+        Adicionalmente, cada cliente se cruza con el historial de cancelaciones del CRM para enriquecer el contexto:
+      </div>
+      <div style={{marginTop:10}}>
+        {rule("C.parcial","Tiene al menos una cancelación parcial registrada en CRM")}
+        {rule("P.Total (proc)","Tiene una cancelación total en proceso — aún no se formaliza")}
+        {rule("BAJA DEF.","Cancelación definitiva ya procesada — la cuenta debería darse de baja")}
+        {rule("# Cancel.","Número total de folios de cancelación asociados a la cuenta")}
+        {rule("Fecha Cancel.","Fecha de la última cancelación registrada")}
+      </div>
+    </div>
+
+    {/* Paso 6 */}
+    <div style={card}>
+      <div style={stepTitle}><span style={stepNum("6","#1ABC9C")}>6</span>Saldo Vencido</div>
+      <div style={body}>
+        Para cada cliente se consultan las facturas pendientes de pago en Zoho Books. Se suman todos los saldos vencidos (facturas cuya fecha de vencimiento ya pasó y tienen balance pendiente). Este dato aparece como columna <b>"Saldo Venc."</b> en todas las secciones y ayuda a priorizar la gestión de cobranza.
+      </div>
+      {divider}
+      <div style={sub}>Campos complementarios por cliente</div>
+      <div style={{marginTop:4}}>
+        {rule("Empresa Numaris","Easytrack, Sfleet, Smart Tracker, Tecnocontrol o Traffilog — origen: Books → CRM fallback")}
+        {rule("Ejec. Cobro","Ejecutivo de cobranza asignado desde el campo salesrep de Zoho Books")}
+        {rule("Owner CRM","Propietario de la cuenta en Zoho CRM")}
+        {rule("Activos","Número de dispositivos/unidades activas vinculadas al cliente")}
+        {rule("Sub Previa","Indica si el cliente tuvo alguna suscripción previa (aunque ya no esté activa)")}
+        {rule("Books (Sí/No)","Indica si el cliente tiene vinculación en Zoho Books (tabla customers)")}
+      </div>
+    </div>
+
+    {/* Paso 7 */}
+    <div style={card}>
+      <div style={stepTitle}><span style={stepNum("7","#34495E")}>7</span>Filtros Globales</div>
+      <div style={body}>
+        El dashboard permite filtrar todas las secciones simultáneamente por dos dimensiones:
+      </div>
+      <div style={{marginTop:10}}>
+        {rule("Empresa Numaris","Filtra por la empresa asignada: Easytrack, Sfleet, Smart Tracker, Tecnocontrol, Traffilog o Sin empresa")}
+        {rule("Vinculación Books","Filtra entre clientes que tienen match en Zoho Books (Con Books) vs los que solo existen en CRM (Sin Books)")}
+      </div>
+      <div style={{...body,marginTop:10,fontStyle:"italic",color:"#888"}}>
+        Los KPIs del Resumen se recalculan dinámicamente al aplicar filtros, reflejando solo el subconjunto seleccionado.
+      </div>
+    </div>
+
+    {/* Fuente */}
+    <div style={{textAlign:"center",fontSize:10,color:"#aaa",marginTop:8,padding:8}}>
+      Fuentes: Zoho Books · Zoho Billing · Zoho CRM · Supabase Edge Functions · Actualización en tiempo real
+    </div>
   </div>);
 }
 
