@@ -15,6 +15,7 @@ let _XD = {};
 let _EC = {};
 let _AD = {};
 let _TD = {};
+let _SV = {};
 let RC_STD = [];
 let RC_ESP = [];
 let CS = [];
@@ -57,6 +58,7 @@ const _SP={label:"Sub Prev",fmt:v=>SubBdg(v)};
 const _AC={label:"Accion CRM",fmt:(v,r)=>CndBdg(v,r)};
 
 const _TA={label:"Activos",align:"right",fmt:(v,r)=>{const t=_TD[r[0]];return t?<b>{t}</b>:<span style={{color:"#ccc"}}>0</span>;}};
+const _cSV={label:"Saldo Venc.",v:1,align:"right",fmt:(_,r)=>{const s=_SV[r[0]];return s?<span style={{padding:"2px 6px",borderRadius:4,fontSize:10,fontWeight:700,background:"#E74C3C18",color:"#E74C3C"}}>{fmt(s)}</span>:<span style={{fontSize:10,color:"#ccc"}}>&mdash;</span>;}};
 const Pgr=({p,tp,set})=>tp>1?<div style={{display:"flex",gap:6,justifyContent:"center",marginTop:10,alignItems:"center"}}><button onClick={()=>set(Math.max(0,p-1))} disabled={p===0} style={{padding:"4px 10px",borderRadius:6,border:"1px solid #ddd",background:p===0?"#f0f0f0":"#fff",cursor:p===0?"default":"pointer",fontSize:11}}>&laquo; Ant</button><span style={{fontSize:11,color:NAVY,fontWeight:600}}>Pag {p+1}/{tp}</span><button onClick={()=>set(Math.min(tp-1,p+1))} disabled={p>=tp-1} style={{padding:"4px 10px",borderRadius:6,border:"1px solid #ddd",background:p>=tp-1?"#f0f0f0":"#fff",cursor:p>=tp-1?"default":"pointer",fontSize:11}}>Sig &raquo;</button></div>:null;
 
 
@@ -146,7 +148,7 @@ function TabRevisarConfig() {
     { label: "Vigentes", align: "right", fmt: (v) => <span style={{ color: v > 0 ? "#27AE60" : "#E74C3C", fontWeight: 600 }}>{v}</span> },
     { label: "Intervalos", fmt: v => v },
     { label: "Tipo", fmt: v => <span style={{ padding: "2px 8px", borderRadius: 4, fontSize: 10, fontWeight: 600, background: v === "CONFIG" ? "#FDECEC" : "#FEF3E2", color: v === "CONFIG" ? "#C0392B" : "#E67E22" }}>{v}</span> },
-    _TA,_SP,_AC,_CC,_FC,
+    _TA,_cSV,_SP,_AC,_CC,_FC,
   ];
   const config = RC_STD.filter(r => r[10] === "CONFIG");
   const parcial = RC_STD.filter(r => r[10] === "PARCIAL");
@@ -177,7 +179,7 @@ function TabEspeciales() {
     { label: "Vigentes", align: "right", fmt: (v) => <span style={{ color: v > 0 ? "#27AE60" : "#E74C3C", fontWeight: 600 }}>{v}</span> },
     { label: "Intervalos", fmt: v => v },
     { label: "Tipo", fmt: v => <span style={{ padding: "2px 8px", borderRadius: 4, fontSize: 10, fontWeight: 600, background: v === "CONFIG" ? "#FDECEC" : "#FEF3E2", color: v === "CONFIG" ? "#C0392B" : "#E67E22" }}>{v}</span> },
-    _TA,_SP,_AC,_CC,_FC,
+    _TA,_cSV,_SP,_AC,_CC,_FC,
   ];
   return (
     <div>
@@ -226,11 +228,11 @@ function TabCrearSub() {
     { label: "Prom/Mes", align: "right", fmt: v => fmt(v) },
     { label: "Ult. Fact.", fmt: v => v },
     { label: "Meses Hist.", align: "right", fmt: v => v },
-    _TA,_SP,_AC,_CC,_FC,
+    _TA,_cSV,_SP,_AC,_CC,_FC,
   ];
   const totalMonthlyFiltered = filtered.reduce((s, r) => s + r[5], 0);
   const [csvData,setCsvData]=useState(null);
-  const _buildRows=(data)=>{const hd=["Cliente","Books","Empresa","Ejec.Cobro","Owner CRM","Frec.Hist","Gap Esp.","Gap Actual","Prom/Mes","Ult.Fact","Meses Hist","Activos","Sub Prev","Accion CRM","# Cancel"];const rows=data.map(r=>{const xb=_gx(r[0]);const xc=_gxc(r[0]);const x=xb||xc;const books=xb?"Si":"No";const emp=x?(_EM[x[0]]||""):"";const ej=x?_pn(x[1]):"";const ow=x?_pn(x[2]):"";const act=_TD[r[0]]||0;const sp=r[8]?"Si":"No";const cc=r[9]?"Cand.Cancel":"";const accion=r[10]===3?"BAJA DEF.":cc||(_CS[r[10]]||"");return[r[0],books,emp,ej,ow,r[2],r[3],r[4],r[5],r[6],r[7],act,sp,accion,r[11]];});return{hd,rows};};
+  const _buildRows=(data)=>{const hd=["Cliente","Books","Empresa","Ejec.Cobro","Owner CRM","Frec.Hist","Gap Esp.","Gap Actual","Prom/Mes","Ult.Fact","Meses Hist","Activos","Saldo Vencido","Sub Prev","Accion CRM","# Cancel"];const rows=data.map(r=>{const xb=_gx(r[0]);const xc=_gxc(r[0]);const x=xb||xc;const books=xb?"Si":"No";const emp=x?(_EM[x[0]]||""):"";const ej=x?_pn(x[1]):"";const ow=x?_pn(x[2]):"";const act=_TD[r[0]]||0;const sv=_SV[r[0]]||0;const sp=r[8]?"Si":"No";const cc=r[9]?"Cand.Cancel":"";const accion=r[10]===3?"BAJA DEF.":cc||(_CS[r[10]]||"");return[r[0],books,emp,ej,ow,r[2],r[3],r[4],r[5],r[6],r[7],act,sv,sp,accion,r[11]];});return{hd,rows};};
   const dlCSV=()=>{const{hd,rows}=_buildRows(filtered);const esc=v=>{const s=String(v??"");return s.includes(",")||s.includes('"')||s.includes("\n")?'"'+s.replace(/"/g,'""')+'"':s;};setCsvData(hd.map(esc).join("\t")+"\n"+rows.map(r=>r.map(esc).join("\t")).join("\n"));};
   const dlExcel=()=>{const{hd,rows}=_buildRows(filtered);const ws=XLSX.utils.aoa_to_sheet([hd,...rows]);ws["!cols"]=hd.map((_,i)=>({wch:i===0?40:i===7?14:12}));const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Crear Suscripcion");XLSX.writeFile(wb,"crear_suscripcion.xlsx");};
   return (
@@ -276,7 +278,7 @@ function TabReanudarRenovar() {
     { label: "Valor", align: "right", fmt: v => fmt(v) },
     { label: "Plan", fmt: v => v },
     { label: "Accion", fmt: v => <span style={{ padding: "2px 8px", borderRadius: 4, fontSize: 10, fontWeight: 600, background: v === "REANUDAR" ? "#D6EAF8" : "#E8DAEF", color: v === "REANUDAR" ? "#2471A3" : "#7D3C98" }}>{v}</span> },
-    _TA,_SP,_AC,_CC,_FC,
+    _TA,_cSV,_SP,_AC,_CC,_FC,
   ];
   const rean = RR.filter(r => r[9] === "REANUDAR");
   const reno = RR.filter(r => r[9] === "RENOVAR");
@@ -297,7 +299,7 @@ function TabPreventivos() {
     { label: "Frec. Hist.", fmt: v => v },
     { label: "Prom/Mes", align: "right", fmt: v => fmt(v) },
     { label: "Ult. Factura", fmt: v => v },
-    _TA,_SP,_AC,_CC,_FC,
+    _TA,_cSV,_SP,_AC,_CC,_FC,
   ];
   return (
     <div>
@@ -317,7 +319,7 @@ function TabExcluidos() {
   const [tf,setTf]=useState("Todos");
   const opts=["Todos","Revisar Subs","Crear Sub","Escalar"];
   const filtered=useMemo(()=>{let d=EXC;if(tf==="Revisar Subs")d=d.filter(r=>r[2]===0);else if(tf==="Crear Sub")d=d.filter(r=>r[2]===1);else if(tf==="Escalar")d=d.filter(r=>r[2]===2);return d;},[tf]);
-  const cols=[{label:"Cliente (Master)",fmt:v=>v},_cEmp,_cEjC,_cOwC,_TA,{label:"Tipo",fmt:v=><span style={{padding:"2px 8px",borderRadius:4,fontSize:10,fontWeight:600,background:"#2980B918",color:"#2980B9"}}>{v===0?"Parent":"Regional"}</span>},{label:"Tab",fmt:v=><span style={{padding:"2px 8px",borderRadius:4,fontSize:10,fontWeight:600,background:_EXC_TAB_C[v]+"18",color:_EXC_TAB_C[v]}}>{_EXC_TAB[v]}</span>},{label:"Hijos",align:"right",fmt:v=><b>{v}</b>},{label:"Prom/Mes",align:"right",fmt:v=>fmt(v)},{label:"Ult.Fact.",fmt:v=>v||"\u2014"}];
+  const cols=[{label:"Cliente (Master)",fmt:v=>v},_cEmp,_cEjC,_cOwC,_TA,_cSV,{label:"Tipo",fmt:v=><span style={{padding:"2px 8px",borderRadius:4,fontSize:10,fontWeight:600,background:"#2980B918",color:"#2980B9"}}>{v===0?"Parent":"Regional"}</span>},{label:"Tab",fmt:v=><span style={{padding:"2px 8px",borderRadius:4,fontSize:10,fontWeight:600,background:_EXC_TAB_C[v]+"18",color:_EXC_TAB_C[v]}}>{_EXC_TAB[v]}</span>},{label:"Hijos",align:"right",fmt:v=><b>{v}</b>},{label:"Prom/Mes",align:"right",fmt:v=>fmt(v)},{label:"Ult.Fact.",fmt:v=>v||"\u2014"}];
   return(<div>
     <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:14}}>
       <KPI label="Masters" value={EXC.length} color="#7F8C8D"/>
@@ -334,7 +336,7 @@ function TabEscalar() {
   const PG=25;const[page,setPage]=useState(0);const[escSearch,setEscSearch]=useState("");
   const filtered=useMemo(()=>{let d=ESC_S;if(escSearch){const s=escSearch.toLowerCase();d=d.filter(r=>r.some(c=>String(c).toLowerCase().includes(s)));}return d;},[escSearch]);
   const paged=filtered.slice(page*PG,(page+1)*PG);const pages=Math.ceil(filtered.length/PG);
-  const cols=[{label:"Cliente",fmt:(v)=><span style={{fontWeight:600}}>{v}</span>},_cEmp,_cEjC,_cOwC,_TA,{label:"# Cancel.",fmt:(_,r)=>r[3]>0?r[3]:<span style={{color:"#ccc"}}>&mdash;</span>,align:"center"},{label:"Fecha Cancel.",fmt:(_,r)=>{const d=BAJA_DATES[r[0]];return d?<span style={{fontSize:10}}>{d}</span>:<span style={{fontSize:10,color:"#ccc"}}>&mdash;</span>;}}];
+  const cols=[{label:"Cliente",fmt:(v)=><span style={{fontWeight:600}}>{v}</span>},_cEmp,_cEjC,_cOwC,_TA,_cSV,{label:"# Cancel.",fmt:(_,r)=>r[3]>0?r[3]:<span style={{color:"#ccc"}}>&mdash;</span>,align:"center"},{label:"Fecha Cancel.",fmt:(_,r)=>{const d=BAJA_DATES[r[0]];return d?<span style={{fontSize:10}}>{d}</span>:<span style={{fontSize:10,color:"#ccc"}}>&mdash;</span>;}}];
   return(<div>
     <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:10,flexWrap:"wrap"}}>
       <input placeholder="Buscar..." value={escSearch} onChange={e=>{setEscSearch(e.target.value);setPage(0);}} style={{padding:"6px 12px",border:"1px solid #ddd",borderRadius:6,width:220,fontSize:12}}/>
@@ -348,7 +350,7 @@ function TabExcParent() {
   const PG=25;const[page,setPage]=useState(0);const[epSearch,setEpSearch]=useState("");
   const filtered=useMemo(()=>{let d=EXP;if(epSearch){const s=epSearch.toLowerCase();d=d.filter(r=>r.some(c=>String(c).toLowerCase().includes(s)));}return d;},[epSearch]);
   const paged=filtered.slice(page*PG,(page+1)*PG);const pages=Math.ceil(filtered.length/PG);
-  const cols=[{label:"Cliente",fmt:v=><span style={{fontWeight:600}}>{v}</span>},_cEmp,_cEjC,_cOwC,_TA,{label:"Parent Account",fmt:(_,r)=>r[2]}];
+  const cols=[{label:"Cliente",fmt:v=><span style={{fontWeight:600}}>{v}</span>},_cEmp,_cEjC,_cOwC,_TA,_cSV,{label:"Parent Account",fmt:(_,r)=>r[2]}];
   return(<div>
     <div style={{background:"#FEF9E7",border:"1px solid #F9E79F",borderRadius:8,padding:10,marginBottom:10,fontSize:11}}>
       Excluidas de Escalar: cuentas con <strong>Parent Account</strong> en CRM (hijos) o con <em>(antes...)</em> (facturan bajo otra razon social).
@@ -380,7 +382,7 @@ export default function AccionesClientes({ userEmail, onLogout }) {
       CS = d.CS; CSP = d.CSP; RR = d.RR; EXC = d.EXC;
       ESC_S = d.ESC_S; EXP = d.EXP;
       _O = d._O; _OX = d._OX;
-      BAJA_DATES = d.BAJA_DATES; _TD = d._TD; _XD = d._XD; _EC = d._EC || {}; _AD = d._AD;
+      BAJA_DATES = d.BAJA_DATES; _TD = d._TD; _XD = d._XD; _EC = d._EC || {}; _AD = d._AD; _SV = d._SV || {};
       setLoaded(true);
     }).catch(e => console.error('Error loading data:', e));
   }, []);
