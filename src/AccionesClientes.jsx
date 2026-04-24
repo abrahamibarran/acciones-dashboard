@@ -12,6 +12,7 @@ let BAJA_DATES = {};
 let _O = [];
 let _OX = [];
 let _XD = {};
+let _EC = {};
 let _AD = {};
 let _TD = {};
 let RC_STD = [];
@@ -40,15 +41,16 @@ const CndBdg = (v, r) => {
 };
 
 
-const _EM={"E":"Easytrack","S":"Sfleet","M":"Smart Tracker","T":"Tecnocontrol"};
+const _EM={"E":"Easytrack","S":"Sfleet","M":"Smart Tracker","T":"Tecnocontrol","R":"Traffilog"};
 
 
 
 const _gx=n=>{const v=_XD[n];if(!v)return null;return[v[0],+v.slice(1).split(",")[0],+v.slice(1).split(",")[1]];};
+const _gxc=n=>{const v=_EC[n];if(!v)return null;return[v[0],+v.slice(1).split(",")[0],+v.slice(1).split(",")[1]];};
 const _pn=i=>{if(i<0)return"\u2014";if(i<_O.length){const n=_O[i];return n?n.split(" ").slice(0,2).join(" "):"?";}const n=_OX[i-_O.length];return n?n.split(" ").slice(0,2).join(" "):"?";};
-const _cEmp={label:"Empresa",v:1,fmt:(_,r)=>{const x=_gx(r[0]);return x?(_EM[x[0]]||"\u2014"):"\u2014";}};
-const _cEjC={label:"Ejec.Cobro",v:1,fmt:(_,r)=>{const x=_gx(r[0]);if(x)return _pn(x[1]);const a=_AD[r[0]];return a>=0?_pn(a):"\u2014";}};
-const _cOwC={label:"Owner CRM",fmt:(v,r)=>{const x=_gx(r[0]);if(x)return _pn(x[2]);const o=_O[v];return o?o.split(" ").slice(0,2).join(" "):"\u2014";}};
+const _cEmp={label:"Empresa",v:1,fmt:(_,r)=>{const x=_gx(r[0])||_gxc(r[0]);return x?(_EM[x[0]]||"\u2014"):"\u2014";}};
+const _cEjC={label:"Ejec.Cobro",v:1,fmt:(_,r)=>{const x=_gx(r[0])||_gxc(r[0]);if(x)return _pn(x[1]);const a=_AD[r[0]];return a>=0?_pn(a):"\u2014";}};
+const _cOwC={label:"Owner CRM",fmt:(v,r)=>{const x=_gx(r[0])||_gxc(r[0]);if(x)return _pn(x[2]);const o=_O[v];return o?o.split(" ").slice(0,2).join(" "):"\u2014";}};
 const _CC={label:"# Cancel.",align:"right",fmt:v=>v>0?<span style={{padding:"2px 6px",borderRadius:4,fontSize:10,fontWeight:600,background:"#C0392B18",color:"#C0392B"}}>{v}</span>:<span style={{fontSize:10,color:"#ccc"}}>0</span>};
 const _FC={label:"Fecha Cancel.",fmt:(v,r)=>{const d=BAJA_DATES[r[0]];return d?<span style={{fontSize:10}}>{d}</span>:<span style={{fontSize:10,color:"#ccc"}}>&mdash;</span>;}};
 const _SP={label:"Sub Prev",fmt:v=>SubBdg(v)};
@@ -228,7 +230,7 @@ function TabCrearSub() {
   ];
   const totalMonthlyFiltered = filtered.reduce((s, r) => s + r[5], 0);
   const [csvData,setCsvData]=useState(null);
-  const _buildRows=(data)=>{const hd=["Cliente","Books","Empresa","Ejec.Cobro","Owner CRM","Frec.Hist","Gap Esp.","Gap Actual","Prom/Mes","Ult.Fact","Meses Hist","Activos","Sub Prev","Accion CRM","# Cancel"];const rows=data.map(r=>{const x=_gx(r[0]);const books=x?"Si":"No";const emp=x?(_EM[x[0]]||""):"";const ej=x?_pn(x[1]):"";const ow=x?_pn(x[2]):"";const act=_TD[r[0]]||0;const sp=r[8]?"Si":"No";const cc=r[9]?"Cand.Cancel":"";const accion=r[10]===3?"BAJA DEF.":cc||(_CS[r[10]]||"");return[r[0],books,emp,ej,ow,r[2],r[3],r[4],r[5],r[6],r[7],act,sp,accion,r[11]];});return{hd,rows};};
+  const _buildRows=(data)=>{const hd=["Cliente","Books","Empresa","Ejec.Cobro","Owner CRM","Frec.Hist","Gap Esp.","Gap Actual","Prom/Mes","Ult.Fact","Meses Hist","Activos","Sub Prev","Accion CRM","# Cancel"];const rows=data.map(r=>{const xb=_gx(r[0]);const xc=_gxc(r[0]);const x=xb||xc;const books=xb?"Si":"No";const emp=x?(_EM[x[0]]||""):"";const ej=x?_pn(x[1]):"";const ow=x?_pn(x[2]):"";const act=_TD[r[0]]||0;const sp=r[8]?"Si":"No";const cc=r[9]?"Cand.Cancel":"";const accion=r[10]===3?"BAJA DEF.":cc||(_CS[r[10]]||"");return[r[0],books,emp,ej,ow,r[2],r[3],r[4],r[5],r[6],r[7],act,sp,accion,r[11]];});return{hd,rows};};
   const dlCSV=()=>{const{hd,rows}=_buildRows(filtered);const esc=v=>{const s=String(v??"");return s.includes(",")||s.includes('"')||s.includes("\n")?'"'+s.replace(/"/g,'""')+'"':s;};setCsvData(hd.map(esc).join("\t")+"\n"+rows.map(r=>r.map(esc).join("\t")).join("\n"));};
   const dlExcel=()=>{const{hd,rows}=_buildRows(filtered);const ws=XLSX.utils.aoa_to_sheet([hd,...rows]);ws["!cols"]=hd.map((_,i)=>({wch:i===0?40:i===7?14:12}));const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Crear Suscripcion");XLSX.writeFile(wb,"crear_suscripcion.xlsx");};
   return (
@@ -378,7 +380,7 @@ export default function AccionesClientes({ userEmail, onLogout }) {
       CS = d.CS; CSP = d.CSP; RR = d.RR; EXC = d.EXC;
       ESC_S = d.ESC_S; EXP = d.EXP;
       _O = d._O; _OX = d._OX;
-      BAJA_DATES = d.BAJA_DATES; _TD = d._TD; _XD = d._XD; _AD = d._AD;
+      BAJA_DATES = d.BAJA_DATES; _TD = d._TD; _XD = d._XD; _EC = d._EC || {}; _AD = d._AD;
       setLoaded(true);
     }).catch(e => console.error('Error loading data:', e));
   }, []);
