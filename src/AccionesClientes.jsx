@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, createContext, useContext } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from "recharts";
 import * as XLSX from "xlsx";
 
@@ -43,8 +43,11 @@ const CndBdg = (v, r) => {
 
 
 const _EM={"E":"Easytrack","S":"Sfleet","M":"Smart Tracker","T":"Tecnocontrol","R":"Traffilog"};
-
-
+const _EMP_OPTS=["Todas","Easytrack","Sfleet","Smart Tracker","Tecnocontrol","Traffilog","Sin empresa"];
+const _EMP_CODES={"Easytrack":"E","Sfleet":"S","Smart Tracker":"M","Tecnocontrol":"T","Traffilog":"R"};
+const EmpCtx=createContext("Todas");
+const getEmpCode=n=>{const v=_XD[n];if(v)return v[0];const c=_EC[n];if(c)return c[0];return"";};
+const empFilter=(data,emp)=>{if(emp==="Todas")return data;if(emp==="Sin empresa")return data.filter(r=>!getEmpCode(r[0]));const code=_EMP_CODES[emp];return data.filter(r=>getEmpCode(r[0])===code);};
 
 const _gx=n=>{const v=_XD[n];if(!v)return null;return[v[0],+v.slice(1).split(",")[0],+v.slice(1).split(",")[1]];};
 const _gxc=n=>{const v=_EC[n];if(!v)return null;return[v[0],+v.slice(1).split(",")[0],+v.slice(1).split(",")[1]];};
@@ -83,18 +86,37 @@ function DataTable({columns,data,maxH,hideSearch}){
 }
 
 function TabResumen() {
-  const actionable = Object.entries(ACTIONS).filter(([k]) => !["OK_SUB_VIGENTE","FUTURA","ESCALAR","EXCLUIDOS"].includes(k));
+  const emp=useContext(EmpCtx);
+  const fA=useMemo(()=>{
+    if(emp==="Todas") return ACTIONS;
+    const fRC=empFilter(RC_STD,emp),fRE=empFilter(RC_ESP,emp),fCS=empFilter(CS,emp),fCSP=empFilter(CSP,emp);
+    const fRR=empFilter(RR,emp),fEXC=empFilter(EXC,emp),fESC=empFilter(ESC_S,emp);
+    const rean=fRR.filter(r=>r[9]==="Reanudar"),reno=fRR.filter(r=>r[9]==="Renovar");
+    const mk=(l,cnt,mo,c,d)=>({label:l,cnt,monthly:mo,color:c,desc:d});
+    return{
+      REVISAR_CONFIG:mk('Revisar Config.',fRC.length,fRC.reduce((s,r)=>s+r[3],0),'#E74C3C',''),
+      CONTRATOS_ESP:mk('Contratos Especiales',fRE.length,fRE.reduce((s,r)=>s+r[3],0),'#8E44AD',''),
+      CREAR_SUB:mk('Crear Suscripcion',fCS.length,fCS.reduce((s,r)=>s+r[5],0),'#F39C12',''),
+      CREAR_SUB_PREV:mk('Crear Sub. Preventivo',fCSP.length,fCSP.reduce((s,r)=>s+r[3],0),'#F5B041',''),
+      RENOVAR:mk('Renovar',reno.length,reno.reduce((s,r)=>s+r[4],0),'#9B59B6',''),
+      REANUDAR:mk('Reanudar',rean.length,rean.reduce((s,r)=>s+r[4],0),'#3498DB',''),
+      OK_SUB_VIGENTE:ACTIONS.OK_SUB_VIGENTE,FUTURA:ACTIONS.FUTURA,
+      ESCALAR:mk('Escalar',fESC.length,0,'#7F8C8D',''),
+      EXCLUIDOS:mk('Excluidos (Masters)',fEXC.length,0,'#BDC3C7',''),
+    };
+  },[emp]);
+  const actionable = Object.entries(fA).filter(([k]) => !["OK_SUB_VIGENTE","FUTURA","ESCALAR","EXCLUIDOS"].includes(k));
   const totalActionable = actionable.reduce((s, [, v]) => s + v.cnt, 0);
   const totalMonthly = actionable.reduce((s, [, v]) => s + v.monthly, 0);
-  const pieData = Object.entries(ACTIONS).filter(([k]) => k !== "EXCLUIDOS").map(([k, v]) => ({ name: v.label, value: v.cnt, color: v.color }));
+  const pieData = Object.entries(fA).filter(([k]) => k !== "EXCLUIDOS").map(([k, v]) => ({ name: v.label, value: v.cnt, color: v.color }));
   const barData = actionable.map(([k, v]) => ({ name: v.label, value: v.monthly, color: v.color })).sort((a, b) => b.value - a.value);
   return (
     <div>
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
         <KPI label="Clientes Accionables" value={totalActionable} sub="requieren accion" color="#E74C3C" />
         <KPI label="Ingreso Mensual en Riesgo" value={fmtK(totalMonthly)} sub="de acciones pendientes" color="#E67E22" />
-        <KPI label="OK Sub Vigente" value={ACTIONS.OK_SUB_VIGENTE.cnt} sub={fmtK(ACTIONS.OK_SUB_VIGENTE.monthly) + "/mes"} color="#27AE60" />
-        <KPI label="Excluidos (Masters)" value={ACTIONS.EXCLUIDOS.cnt} sub="8 parent + 5 regionales" color="#BDC3C7" />
+        <KPI label="OK Sub Vigente" value={fA.OK_SUB_VIGENTE.cnt} sub={fmtK(fA.OK_SUB_VIGENTE.monthly) + "/mes"} color="#27AE60" />
+        <KPI label="Excluidos (Masters)" value={fA.EXCLUIDOS.cnt} color="#BDC3C7" />
       </div>
       <div style={{background:"#E8F8F5",border:"1px solid #A3E4D7",borderRadius:8,padding:12,marginBottom:16,fontSize:12}}>
         <strong>Criterios:</strong> Intervalo sub = frecuencia. next_billing = fuente de verdad. 25 masters excl. Sub Previa + Cand.Cancel + BAJA DEF.
@@ -119,7 +141,7 @@ function TabResumen() {
       <div style={{background:"#fff",borderRadius:10,padding:16,boxShadow:"0 1px 4px rgba(0,0,0,.08)"}}>
         <div style={{fontWeight:600,fontSize:13,color:NAVY,marginBottom:10}}>Matriz de Acciones</div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:10}}>
-          {Object.entries(ACTIONS).map(([k,v])=>(
+          {Object.entries(fA).map(([k,v])=>(
             <div key={k} style={{display:"flex",gap:10,padding:10,borderRadius:8,border:`1px solid ${v.color}22`,background:`${v.color}08`}}>
               <div style={{width:6,borderRadius:3,background:v.color,flexShrink:0}}/>
               <div>
@@ -137,6 +159,8 @@ function TabResumen() {
 }
 
 function TabRevisarConfig() {
+  const emp=useContext(EmpCtx);
+  const data=useMemo(()=>empFilter(RC_STD,emp),[emp]);
   const cols = [
     { label: "Cliente", fmt: v => v },_cEmp,_cEjC,_cOwC,
     { label: "Frec. Sub", fmt: v => v },
@@ -150,24 +174,26 @@ function TabRevisarConfig() {
     { label: "Tipo", fmt: v => <span style={{ padding: "2px 8px", borderRadius: 4, fontSize: 10, fontWeight: 600, background: v === "CONFIG" ? "#FDECEC" : "#FEF3E2", color: v === "CONFIG" ? "#C0392B" : "#E67E22" }}>{v}</span> },
     _TA,_cSV,_SP,_AC,_CC,_FC,
   ];
-  const config = RC_STD.filter(r => r[10] === "CONFIG");
-  const parcial = RC_STD.filter(r => r[10] === "PARCIAL");
+  const config = data.filter(r => r[10] === "CONFIG");
+  const parcial = data.filter(r => r[10] === "PARCIAL");
   return (
     <div>
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
         <KPI label="Config. (sin next_billing)" value={config.length} sub={fmtK(config.reduce((s, r) => s + (r[3] || 0), 0)) + "/mes"} color="#E74C3C" />
         <KPI label="Parcial (mixto)" value={parcial.length} sub={fmtK(parcial.reduce((s, r) => s + (r[3] || 0), 0)) + "/mes"} color="#E67E22" />
-        <KPI label="Valor Total Subs" value={fmtK(RC_STD.reduce((s, r) => s + r[6], 0))} color={BLUE} />
+        <KPI label="Valor Total Subs" value={fmtK(data.reduce((s, r) => s + r[6], 0))} color={BLUE} />
       </div>
       <div style={{background:"#E8F8F5",border:"1px solid #A3E4D7",borderRadius:8,padding:12,marginBottom:12,fontSize:12}}>
         Subs frecuencia <strong>anual o menor</strong>. Multianuales en "Contratos Especiales".
       </div>
-      <DataTable columns={cols} data={RC_STD} />
+      <DataTable columns={cols} data={data} />
     </div>
   );
 }
 
 function TabEspeciales() {
+  const emp=useContext(EmpCtx);
+  const data=useMemo(()=>empFilter(RC_ESP,emp),[emp]);
   const cols = [
     { label: "Cliente", fmt: v => v },_cEmp,_cEjC,_cOwC,
     { label: "Frec. Sub", fmt: v => <span style={{ padding: "2px 6px", borderRadius: 4, fontSize: 10, background: "#F4ECF7", color: "#8E44AD", fontWeight: 600 }}>{v}</span> },
@@ -184,19 +210,20 @@ function TabEspeciales() {
   return (
     <div>
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
-        <KPI label="Contratos Especiales" value={RC_ESP.length} sub="suscripciones multianuales" color="#8E44AD" />
-        <KPI label="Ingreso Mensual" value={fmtK(RC_ESP.reduce((s, r) => s + (r[3] || 0), 0))} color="#8E44AD" />
-        <KPI label="Valor Total Subs" value={fmtK(RC_ESP.reduce((s, r) => s + r[6], 0))} color={BLUE} />
+        <KPI label="Contratos Especiales" value={data.length} sub="suscripciones multianuales" color="#8E44AD" />
+        <KPI label="Ingreso Mensual" value={fmtK(data.reduce((s, r) => s + (r[3] || 0), 0))} color="#8E44AD" />
+        <KPI label="Valor Total Subs" value={fmtK(data.reduce((s, r) => s + r[6], 0))} color={BLUE} />
       </div>
       <div style={{background:"#F4ECF7",border:"1px solid #D2B4DE",borderRadius:8,padding:12,marginBottom:12,fontSize:12}}>
         <strong>Multianuales (&gt;1 anio):</strong> Leasing, arrendamiento. next_billing=NULL. Validar mecanismo de cobro.
       </div>
-      <DataTable columns={cols} data={RC_ESP} />
+      <DataTable columns={cols} data={data} />
     </div>
   );
 }
 
 function TabCrearSub() {
+  const emp=useContext(EmpCtx);
   const PAGE_SIZE = 25;
   const [page, setPage] = useState(0);
   const [crmFilter, setCrmFilter] = useState("Todos");
@@ -205,7 +232,7 @@ function TabCrearSub() {
   const crmOpts = ["Todos","BAJA DEF.","Cand.Cancel","C.parcial","P.Total","Con folios","Sin cancelacion"];
   const subOpts = ["Todos","Si","No"];
   const filtered = useMemo(() => {
-    let d = CS;
+    let d = empFilter(CS,emp);
     if (csSearch) { const s = csSearch.toLowerCase(); d = d.filter(r => r.some(c => String(c).toLowerCase().includes(s))); }
     if (crmFilter === "BAJA DEF.") d = d.filter(r => r[10] === 3);
     else if (crmFilter === "Cand.Cancel") d = d.filter(r => r[9] === 1 && r[10] !== 3);
@@ -216,7 +243,7 @@ function TabCrearSub() {
     if (subFilter === "Si") d = d.filter(r => r[8] === 1);
     else if (subFilter === "No") d = d.filter(r => r[8] === 0);
     return d;
-  }, [crmFilter, subFilter, csSearch]);
+  }, [crmFilter, subFilter, csSearch, emp]);
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paged = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
   const _cBooks={label:"Books",v:1,fmt:(_,r)=>{const x=_gx(r[0]);return x?<span style={{padding:"2px 8px",borderRadius:4,fontSize:10,fontWeight:600,background:"#27AE6018",color:"#27AE60"}}>Si</span>:<span style={{padding:"2px 8px",borderRadius:4,fontSize:10,fontWeight:600,background:"#E74C3C18",color:"#E74C3C"}}>No</span>;}};
@@ -268,6 +295,8 @@ function TabCrearSub() {
 }
 
 function TabReanudarRenovar() {
+  const emp=useContext(EmpCtx);
+  const data=useMemo(()=>empFilter(RR,emp),[emp]);
   const cols = [
     { label: "Cliente", fmt: v => v },_cEmp,_cEjC,_cOwC,
     { label: "Frec.", fmt: v => v },
@@ -280,20 +309,22 @@ function TabReanudarRenovar() {
     { label: "Accion", fmt: v => <span style={{ padding: "2px 8px", borderRadius: 4, fontSize: 10, fontWeight: 600, background: v === "REANUDAR" ? "#D6EAF8" : "#E8DAEF", color: v === "REANUDAR" ? "#2471A3" : "#7D3C98" }}>{v}</span> },
     _TA,_cSV,_SP,_AC,_CC,_FC,
   ];
-  const rean = RR.filter(r => r[9] === "REANUDAR");
-  const reno = RR.filter(r => r[9] === "RENOVAR");
+  const rean = data.filter(r => r[9] === "Reanudar");
+  const reno = data.filter(r => r[9] === "Renovar");
   return (
     <div>
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
         <KPI label="Reanudar (Pausadas)" value={rean.length} sub={fmtK(rean.reduce((s, r) => s + (r[4] || 0), 0)) + "/mes"} color="#3498DB" />
         <KPI label="Renovar (Expiradas)" value={reno.length} sub={fmtK(reno.reduce((s, r) => s + (r[4] || 0), 0)) + "/mes"} color="#9B59B6" />
       </div>
-      <DataTable columns={cols} data={RR} />
+      <DataTable columns={cols} data={data} />
     </div>
   );
 }
 
 function TabPreventivos() {
+  const emp=useContext(EmpCtx);
+  const data=useMemo(()=>empFilter(CSP,emp),[emp]);
   const cols = [
     { label: "Cliente", fmt: v => v },_cEmp,_cEjC,_cOwC,
     { label: "Frec. Hist.", fmt: v => v },
@@ -304,26 +335,27 @@ function TabPreventivos() {
   return (
     <div>
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
-        <KPI label="Clientes Preventivos" value={9} sub="en ciclo pero sin suscripcion" color="#F5B041" />
-        <KPI label="Ingreso Mensual" value={fmtK(379582)} sub="para proteger" color="#F5B041" />
+        <KPI label="Clientes Preventivos" value={data.length} sub="en ciclo pero sin suscripcion" color="#F5B041" />
+        <KPI label="Ingreso Mensual" value={fmtK(data.reduce((s,r)=>s+r[3],0))} sub="para proteger" color="#F5B041" />
       </div>
       <div style={{ background: "#FEF9E7", border: "1px solid #F9E79F", borderRadius: 8, padding: 12, marginBottom: 12, fontSize: 12 }}>
         <strong>Preventivo:</strong> Clientes dentro de su ciclo normal, pero sin suscripcion. Crear suscripcion para asegurar continuidad de cobro.
       </div>
-      <DataTable columns={cols} data={CSP} />
+      <DataTable columns={cols} data={data} />
     </div>
   );
 }
 
 function TabExcluidos() {
+  const emp=useContext(EmpCtx);
   const [tf,setTf]=useState("Todos");
   const opts=["Todos","Revisar Subs","Crear Sub","Escalar"];
-  const filtered=useMemo(()=>{let d=EXC;if(tf==="Revisar Subs")d=d.filter(r=>r[2]===0);else if(tf==="Crear Sub")d=d.filter(r=>r[2]===1);else if(tf==="Escalar")d=d.filter(r=>r[2]===2);return d;},[tf]);
+  const filtered=useMemo(()=>{let d=empFilter(EXC,emp);if(tf==="Revisar Subs")d=d.filter(r=>r[2]===0);else if(tf==="Crear Sub")d=d.filter(r=>r[2]===1);else if(tf==="Escalar")d=d.filter(r=>r[2]===2);return d;},[tf,emp]);
   const cols=[{label:"Cliente (Master)",fmt:v=>v},_cEmp,_cEjC,_cOwC,_TA,_cSV,{label:"Tipo",fmt:v=><span style={{padding:"2px 8px",borderRadius:4,fontSize:10,fontWeight:600,background:"#2980B918",color:"#2980B9"}}>{v===0?"Parent":"Regional"}</span>},{label:"Tab",fmt:v=><span style={{padding:"2px 8px",borderRadius:4,fontSize:10,fontWeight:600,background:_EXC_TAB_C[v]+"18",color:_EXC_TAB_C[v]}}>{_EXC_TAB[v]}</span>},{label:"Hijos",align:"right",fmt:v=><b>{v}</b>},{label:"Prom/Mes",align:"right",fmt:v=>fmt(v)},{label:"Ult.Fact.",fmt:v=>v||"\u2014"}];
   return(<div>
     <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:14}}>
-      <KPI label="Masters" value={EXC.length} color="#7F8C8D"/>
-      <KPI label="Prom/Mes" value={fmtK(EXC.reduce((s,r)=>s+r[4],0))} color="#2980B9"/>
+      <KPI label="Masters" value={filtered.length} color="#7F8C8D"/>
+      <KPI label="Prom/Mes" value={fmtK(filtered.reduce((s,r)=>s+r[4],0))} color="#2980B9"/>
     </div>
     <div style={{display:"flex",gap:6,marginBottom:10,flexWrap:"wrap"}}>
       {opts.map(o=><button key={o} onClick={()=>setTf(o)} style={{padding:"3px 10px",borderRadius:6,border:"1px solid "+(tf===o?BLUE:"#ddd"),background:tf===o?BLUE:"#fff",color:tf===o?"#fff":"#444",fontSize:11,cursor:"pointer"}}>{o}</button>)}
@@ -333,8 +365,9 @@ function TabExcluidos() {
 }
 
 function TabEscalar() {
+  const emp=useContext(EmpCtx);
   const PG=25;const[page,setPage]=useState(0);const[escSearch,setEscSearch]=useState("");
-  const filtered=useMemo(()=>{let d=ESC_S;if(escSearch){const s=escSearch.toLowerCase();d=d.filter(r=>r.some(c=>String(c).toLowerCase().includes(s)));}return d;},[escSearch]);
+  const filtered=useMemo(()=>{let d=empFilter(ESC_S,emp);if(escSearch){const s=escSearch.toLowerCase();d=d.filter(r=>r.some(c=>String(c).toLowerCase().includes(s)));}return d;},[escSearch,emp]);
   const paged=filtered.slice(page*PG,(page+1)*PG);const pages=Math.ceil(filtered.length/PG);
   const cols=[{label:"Cliente",fmt:(v)=><span style={{fontWeight:600}}>{v}</span>},_cEmp,_cEjC,_cOwC,_TA,_cSV,{label:"# Cancel.",fmt:(_,r)=>r[3]>0?r[3]:<span style={{color:"#ccc"}}>&mdash;</span>,align:"center"},{label:"Fecha Cancel.",fmt:(_,r)=>{const d=BAJA_DATES[r[0]];return d?<span style={{fontSize:10}}>{d}</span>:<span style={{fontSize:10,color:"#ccc"}}>&mdash;</span>;}}];
   return(<div>
@@ -347,8 +380,9 @@ function TabEscalar() {
   </div>);
 }
 function TabExcParent() {
+  const emp=useContext(EmpCtx);
   const PG=25;const[page,setPage]=useState(0);const[epSearch,setEpSearch]=useState("");
-  const filtered=useMemo(()=>{let d=EXP;if(epSearch){const s=epSearch.toLowerCase();d=d.filter(r=>r.some(c=>String(c).toLowerCase().includes(s)));}return d;},[epSearch]);
+  const filtered=useMemo(()=>{let d=empFilter(EXP,emp);if(epSearch){const s=epSearch.toLowerCase();d=d.filter(r=>r.some(c=>String(c).toLowerCase().includes(s)));}return d;},[epSearch,emp]);
   const paged=filtered.slice(page*PG,(page+1)*PG);const pages=Math.ceil(filtered.length/PG);
   const cols=[{label:"Cliente",fmt:v=><span style={{fontWeight:600}}>{v}</span>},_cEmp,_cEjC,_cOwC,_TA,_cSV,{label:"Parent Account",fmt:(_,r)=>r[2]}];
   return(<div>
@@ -376,6 +410,7 @@ function TabMetodologia() {
 export default function AccionesClientes({ userEmail, onLogout }) {
   const [tab, setTab] = useState(0);
   const [loaded, setLoaded] = useState(false);
+  const [empFilt, setEmpFilt] = useState("Todas");
   useEffect(() => {
     fetch(API_URL).then(r => r.json()).then(d => {
       ACTIONS = d.ACTIONS; RC_STD = d.RC_STD; RC_ESP = d.RC_ESP;
@@ -408,11 +443,16 @@ export default function AccionesClientes({ userEmail, onLogout }) {
             <button onClick={onLogout} style={{padding:"5px 12px",borderRadius:6,border:"1px solid #ddd",background:"#fff",color:"#666",fontSize:11,cursor:"pointer",fontWeight:600}}>Salir</button>
           </div>}
         </div>
+        <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:10,flexWrap:"wrap"}}>
+          <span style={{fontSize:10,fontWeight:700,color:NAVY}}>Empresa:</span>
+          {_EMP_OPTS.map(o=><button key={o} onClick={()=>setEmpFilt(o)} style={{padding:"3px 10px",borderRadius:6,border:empFilt===o?`2px solid ${BLUE}`:"1px solid #ddd",background:empFilt===o?BLUE:"#fff",color:empFilt===o?"#fff":NAVY,fontSize:10,fontWeight:600,cursor:"pointer"}}>{o}</button>)}
+        </div>
         <div style={{ display: "flex", gap: 4, marginBottom: 16, flexWrap: "wrap" }}>
           {TABS.map((t, i) => (
             <button key={i} onClick={() => setTab(i)} style={{ padding: "8px 16px", borderRadius: 8, border: "none", background: tab === i ? NAVY : "#fff", color: tab === i ? "#fff" : NAVY, fontWeight: tab === i ? 700 : 500, fontSize: 12, cursor: "pointer", boxShadow: tab === i ? "0 2px 6px rgba(0,0,0,.15)" : "0 1px 3px rgba(0,0,0,.06)" }}>{t}</button>
           ))}
         </div>
+        <EmpCtx.Provider value={empFilt}>
         {tab === 0 && <TabResumen />}
         {tab === 1 && <TabRevisarConfig />}
         {tab === 2 && <TabEspeciales />}
@@ -423,6 +463,7 @@ export default function AccionesClientes({ userEmail, onLogout }) {
         {tab === 7 && <TabEscalar />}
         {tab === 8 && <TabExcParent />}
         {tab === 9 && <TabMetodologia />}
+        </EmpCtx.Provider>
         <div style={{ textAlign: "center", fontSize: 10, color: "#bbb", marginTop: 20, padding: 10 }}>Numaris | Supabase (Zoho Books + Billing + CRM)</div>
       </div>
     </div>
