@@ -46,8 +46,13 @@ const _EM={"E":"Easytrack","S":"Sfleet","M":"Smart Tracker","T":"Tecnocontrol","
 const _EMP_OPTS=["Todas","Easytrack","Sfleet","Smart Tracker","Tecnocontrol","Traffilog","Sin empresa"];
 const _EMP_CODES={"Easytrack":"E","Sfleet":"S","Smart Tracker":"M","Tecnocontrol":"T","Traffilog":"R"};
 const EmpCtx=createContext("Todas");
+const BooksCtx=createContext("Todos");
+const _BOOKS_OPTS=["Todos","Con Books","Sin Books"];
 const getEmpCode=n=>{const v=_XD[n];if(v)return v[0];const c=_EC[n];if(c)return c[0];return"";};
+const hasBooks=n=>!!_XD[n];
 const empFilter=(data,emp)=>{if(emp==="Todas")return data;if(emp==="Sin empresa")return data.filter(r=>!getEmpCode(r[0]));const code=_EMP_CODES[emp];return data.filter(r=>getEmpCode(r[0])===code);};
+const booksFilter=(data,bk)=>{if(bk==="Todos")return data;if(bk==="Con Books")return data.filter(r=>hasBooks(r[0]));return data.filter(r=>!hasBooks(r[0]));};
+const applyFilters=(data,emp,bk)=>booksFilter(empFilter(data,emp),bk);
 
 const _gx=n=>{const v=_XD[n];if(!v)return null;return[v[0],+v.slice(1).split(",")[0],+v.slice(1).split(",")[1]];};
 const _gxc=n=>{const v=_EC[n];if(!v)return null;return[v[0],+v.slice(1).split(",")[0],+v.slice(1).split(",")[1]];};
@@ -86,11 +91,11 @@ function DataTable({columns,data,maxH,hideSearch}){
 }
 
 function TabResumen() {
-  const emp=useContext(EmpCtx);
+  const emp=useContext(EmpCtx);const bk=useContext(BooksCtx);
   const fA=useMemo(()=>{
-    if(emp==="Todas") return ACTIONS;
-    const fRC=empFilter(RC_STD,emp),fRE=empFilter(RC_ESP,emp),fCS=empFilter(CS,emp),fCSP=empFilter(CSP,emp);
-    const fRR=empFilter(RR,emp),fEXC=empFilter(EXC,emp),fESC=empFilter(ESC_S,emp);
+    if(emp==="Todas"&&bk==="Todos") return ACTIONS;
+    const fRC=applyFilters(RC_STD,emp,bk),fRE=applyFilters(RC_ESP,emp,bk),fCS=applyFilters(CS,emp,bk),fCSP=applyFilters(CSP,emp,bk);
+    const fRR=applyFilters(RR,emp,bk),fEXC=applyFilters(EXC,emp,bk),fESC=applyFilters(ESC_S,emp,bk);
     const rean=fRR.filter(r=>r[9]==="Reanudar"),reno=fRR.filter(r=>r[9]==="Renovar");
     const mk=(l,cnt,mo,c,d)=>({label:l,cnt,monthly:mo,color:c,desc:d});
     return{
@@ -104,7 +109,7 @@ function TabResumen() {
       ESCALAR:mk('Escalar',fESC.length,0,'#7F8C8D',''),
       EXCLUIDOS:mk('Excluidos (Masters)',fEXC.length,0,'#BDC3C7',''),
     };
-  },[emp]);
+  },[emp,bk]);
   const actionable = Object.entries(fA).filter(([k]) => !["OK_SUB_VIGENTE","FUTURA","ESCALAR","EXCLUIDOS"].includes(k));
   const totalActionable = actionable.reduce((s, [, v]) => s + v.cnt, 0);
   const totalMonthly = actionable.reduce((s, [, v]) => s + v.monthly, 0);
@@ -159,8 +164,8 @@ function TabResumen() {
 }
 
 function TabRevisarConfig() {
-  const emp=useContext(EmpCtx);
-  const data=useMemo(()=>empFilter(RC_STD,emp),[emp]);
+  const emp=useContext(EmpCtx);const bk=useContext(BooksCtx);
+  const data=useMemo(()=>applyFilters(RC_STD,emp,bk),[emp,bk]);
   const cols = [
     { label: "Cliente", fmt: v => v },_cEmp,_cEjC,_cOwC,
     { label: "Frec. Sub", fmt: v => v },
@@ -192,8 +197,8 @@ function TabRevisarConfig() {
 }
 
 function TabEspeciales() {
-  const emp=useContext(EmpCtx);
-  const data=useMemo(()=>empFilter(RC_ESP,emp),[emp]);
+  const emp=useContext(EmpCtx);const bk=useContext(BooksCtx);
+  const data=useMemo(()=>applyFilters(RC_ESP,emp,bk),[emp,bk]);
   const cols = [
     { label: "Cliente", fmt: v => v },_cEmp,_cEjC,_cOwC,
     { label: "Frec. Sub", fmt: v => <span style={{ padding: "2px 6px", borderRadius: 4, fontSize: 10, background: "#F4ECF7", color: "#8E44AD", fontWeight: 600 }}>{v}</span> },
@@ -223,7 +228,7 @@ function TabEspeciales() {
 }
 
 function TabCrearSub() {
-  const emp=useContext(EmpCtx);
+  const emp=useContext(EmpCtx);const bk=useContext(BooksCtx);
   const PAGE_SIZE = 25;
   const [page, setPage] = useState(0);
   const [crmFilter, setCrmFilter] = useState("Todos");
@@ -232,7 +237,7 @@ function TabCrearSub() {
   const crmOpts = ["Todos","BAJA DEF.","Cand.Cancel","C.parcial","P.Total","Con folios","Sin cancelacion"];
   const subOpts = ["Todos","Si","No"];
   const filtered = useMemo(() => {
-    let d = empFilter(CS,emp);
+    let d = applyFilters(CS,emp,bk);
     if (csSearch) { const s = csSearch.toLowerCase(); d = d.filter(r => r.some(c => String(c).toLowerCase().includes(s))); }
     if (crmFilter === "BAJA DEF.") d = d.filter(r => r[10] === 3);
     else if (crmFilter === "Cand.Cancel") d = d.filter(r => r[9] === 1 && r[10] !== 3);
@@ -243,7 +248,7 @@ function TabCrearSub() {
     if (subFilter === "Si") d = d.filter(r => r[8] === 1);
     else if (subFilter === "No") d = d.filter(r => r[8] === 0);
     return d;
-  }, [crmFilter, subFilter, csSearch, emp]);
+  }, [crmFilter, subFilter, csSearch, emp, bk]);
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paged = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
   const _cBooks={label:"Books",v:1,fmt:(_,r)=>{const x=_gx(r[0]);return x?<span style={{padding:"2px 8px",borderRadius:4,fontSize:10,fontWeight:600,background:"#27AE6018",color:"#27AE60"}}>Si</span>:<span style={{padding:"2px 8px",borderRadius:4,fontSize:10,fontWeight:600,background:"#E74C3C18",color:"#E74C3C"}}>No</span>;}};
@@ -295,8 +300,8 @@ function TabCrearSub() {
 }
 
 function TabReanudarRenovar() {
-  const emp=useContext(EmpCtx);
-  const data=useMemo(()=>empFilter(RR,emp),[emp]);
+  const emp=useContext(EmpCtx);const bk=useContext(BooksCtx);
+  const data=useMemo(()=>applyFilters(RR,emp,bk),[emp,bk]);
   const cols = [
     { label: "Cliente", fmt: v => v },_cEmp,_cEjC,_cOwC,
     { label: "Frec.", fmt: v => v },
@@ -323,8 +328,8 @@ function TabReanudarRenovar() {
 }
 
 function TabPreventivos() {
-  const emp=useContext(EmpCtx);
-  const data=useMemo(()=>empFilter(CSP,emp),[emp]);
+  const emp=useContext(EmpCtx);const bk=useContext(BooksCtx);
+  const data=useMemo(()=>applyFilters(CSP,emp,bk),[emp,bk]);
   const cols = [
     { label: "Cliente", fmt: v => v },_cEmp,_cEjC,_cOwC,
     { label: "Frec. Hist.", fmt: v => v },
@@ -347,10 +352,10 @@ function TabPreventivos() {
 }
 
 function TabExcluidos() {
-  const emp=useContext(EmpCtx);
+  const emp=useContext(EmpCtx);const bk=useContext(BooksCtx);
   const [tf,setTf]=useState("Todos");
   const opts=["Todos","Revisar Subs","Crear Sub","Escalar"];
-  const filtered=useMemo(()=>{let d=empFilter(EXC,emp);if(tf==="Revisar Subs")d=d.filter(r=>r[2]===0);else if(tf==="Crear Sub")d=d.filter(r=>r[2]===1);else if(tf==="Escalar")d=d.filter(r=>r[2]===2);return d;},[tf,emp]);
+  const filtered=useMemo(()=>{let d=applyFilters(EXC,emp,bk);if(tf==="Revisar Subs")d=d.filter(r=>r[2]===0);else if(tf==="Crear Sub")d=d.filter(r=>r[2]===1);else if(tf==="Escalar")d=d.filter(r=>r[2]===2);return d;},[tf,emp,bk]);
   const cols=[{label:"Cliente (Master)",fmt:v=>v},_cEmp,_cEjC,_cOwC,_TA,_cSV,{label:"Tipo",fmt:v=><span style={{padding:"2px 8px",borderRadius:4,fontSize:10,fontWeight:600,background:"#2980B918",color:"#2980B9"}}>{v===0?"Parent":"Regional"}</span>},{label:"Tab",fmt:v=><span style={{padding:"2px 8px",borderRadius:4,fontSize:10,fontWeight:600,background:_EXC_TAB_C[v]+"18",color:_EXC_TAB_C[v]}}>{_EXC_TAB[v]}</span>},{label:"Hijos",align:"right",fmt:v=><b>{v}</b>},{label:"Prom/Mes",align:"right",fmt:v=>fmt(v)},{label:"Ult.Fact.",fmt:v=>v||"\u2014"}];
   return(<div>
     <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:14}}>
@@ -365,9 +370,9 @@ function TabExcluidos() {
 }
 
 function TabEscalar() {
-  const emp=useContext(EmpCtx);
+  const emp=useContext(EmpCtx);const bk=useContext(BooksCtx);
   const PG=25;const[page,setPage]=useState(0);const[escSearch,setEscSearch]=useState("");
-  const filtered=useMemo(()=>{let d=empFilter(ESC_S,emp);if(escSearch){const s=escSearch.toLowerCase();d=d.filter(r=>r.some(c=>String(c).toLowerCase().includes(s)));}return d;},[escSearch,emp]);
+  const filtered=useMemo(()=>{let d=applyFilters(ESC_S,emp,bk);if(escSearch){const s=escSearch.toLowerCase();d=d.filter(r=>r.some(c=>String(c).toLowerCase().includes(s)));}return d;},[escSearch,emp,bk]);
   const paged=filtered.slice(page*PG,(page+1)*PG);const pages=Math.ceil(filtered.length/PG);
   const cols=[{label:"Cliente",fmt:(v)=><span style={{fontWeight:600}}>{v}</span>},_cEmp,_cEjC,_cOwC,_TA,_cSV,{label:"# Cancel.",fmt:(_,r)=>r[3]>0?r[3]:<span style={{color:"#ccc"}}>&mdash;</span>,align:"center"},{label:"Fecha Cancel.",fmt:(_,r)=>{const d=BAJA_DATES[r[0]];return d?<span style={{fontSize:10}}>{d}</span>:<span style={{fontSize:10,color:"#ccc"}}>&mdash;</span>;}}];
   return(<div>
@@ -380,9 +385,9 @@ function TabEscalar() {
   </div>);
 }
 function TabExcParent() {
-  const emp=useContext(EmpCtx);
+  const emp=useContext(EmpCtx);const bk=useContext(BooksCtx);
   const PG=25;const[page,setPage]=useState(0);const[epSearch,setEpSearch]=useState("");
-  const filtered=useMemo(()=>{let d=empFilter(EXP,emp);if(epSearch){const s=epSearch.toLowerCase();d=d.filter(r=>r.some(c=>String(c).toLowerCase().includes(s)));}return d;},[epSearch,emp]);
+  const filtered=useMemo(()=>{let d=applyFilters(EXP,emp,bk);if(epSearch){const s=epSearch.toLowerCase();d=d.filter(r=>r.some(c=>String(c).toLowerCase().includes(s)));}return d;},[epSearch,emp,bk]);
   const paged=filtered.slice(page*PG,(page+1)*PG);const pages=Math.ceil(filtered.length/PG);
   const cols=[{label:"Cliente",fmt:v=><span style={{fontWeight:600}}>{v}</span>},_cEmp,_cEjC,_cOwC,_TA,_cSV,{label:"Parent Account",fmt:(_,r)=>r[2]}];
   return(<div>
@@ -411,6 +416,7 @@ export default function AccionesClientes({ userEmail, onLogout }) {
   const [tab, setTab] = useState(0);
   const [loaded, setLoaded] = useState(false);
   const [empFilt, setEmpFilt] = useState("Todas");
+  const [booksFilt, setBooksFilt] = useState("Todos");
   useEffect(() => {
     fetch(API_URL).then(r => r.json()).then(d => {
       ACTIONS = d.ACTIONS; RC_STD = d.RC_STD; RC_ESP = d.RC_ESP;
@@ -446,6 +452,8 @@ export default function AccionesClientes({ userEmail, onLogout }) {
         <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:10,flexWrap:"wrap"}}>
           <span style={{fontSize:10,fontWeight:700,color:NAVY}}>Empresa:</span>
           {_EMP_OPTS.map(o=><button key={o} onClick={()=>setEmpFilt(o)} style={{padding:"3px 10px",borderRadius:6,border:empFilt===o?`2px solid ${BLUE}`:"1px solid #ddd",background:empFilt===o?BLUE:"#fff",color:empFilt===o?"#fff":NAVY,fontSize:10,fontWeight:600,cursor:"pointer"}}>{o}</button>)}
+          <span style={{fontSize:10,fontWeight:700,color:"#27AE60",marginLeft:12}}>Books:</span>
+          {_BOOKS_OPTS.map(o=><button key={o} onClick={()=>setBooksFilt(o)} style={{padding:"3px 10px",borderRadius:6,border:booksFilt===o?"2px solid #27AE60":"1px solid #ddd",background:booksFilt===o?"#27AE60":"#fff",color:booksFilt===o?"#fff":"#333",fontSize:10,fontWeight:600,cursor:"pointer"}}>{o}</button>)}
         </div>
         <div style={{ display: "flex", gap: 4, marginBottom: 16, flexWrap: "wrap" }}>
           {TABS.map((t, i) => (
@@ -453,6 +461,7 @@ export default function AccionesClientes({ userEmail, onLogout }) {
           ))}
         </div>
         <EmpCtx.Provider value={empFilt}>
+        <BooksCtx.Provider value={booksFilt}>
         {tab === 0 && <TabResumen />}
         {tab === 1 && <TabRevisarConfig />}
         {tab === 2 && <TabEspeciales />}
@@ -463,6 +472,7 @@ export default function AccionesClientes({ userEmail, onLogout }) {
         {tab === 7 && <TabEscalar />}
         {tab === 8 && <TabExcParent />}
         {tab === 9 && <TabMetodologia />}
+        </BooksCtx.Provider>
         </EmpCtx.Provider>
         <div style={{ textAlign: "center", fontSize: 10, color: "#bbb", marginTop: 20, padding: 10 }}>Numaris | Supabase (Zoho Books + Billing + CRM)</div>
       </div>
