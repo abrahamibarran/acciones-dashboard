@@ -215,8 +215,9 @@ function TabCrearSub() {
   }, [crmFilter, subFilter, csSearch]);
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paged = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const _cBooks={label:"Books",v:1,fmt:(_,r)=>{const x=_gx(r[0]);return x?<span style={{padding:"2px 8px",borderRadius:4,fontSize:10,fontWeight:600,background:"#27AE6018",color:"#27AE60"}}>Si</span>:<span style={{padding:"2px 8px",borderRadius:4,fontSize:10,fontWeight:600,background:"#E74C3C18",color:"#E74C3C"}}>No</span>;}};
   const cols = [
-    { label: "Cliente", fmt: v => v },_cEmp,_cEjC,_cOwC,
+    { label: "Cliente", fmt: v => v },_cBooks,_cEmp,_cEjC,_cOwC,
     { label: "Frec. Hist.", fmt: v => v },
     { label: "Gap Esp.", align: "right", fmt: v => v },
     { label: "Gap Actual", align: "right", fmt: v => v + "m" },
@@ -227,7 +228,7 @@ function TabCrearSub() {
   ];
   const totalMonthlyFiltered = filtered.reduce((s, r) => s + r[5], 0);
   const [csvData,setCsvData]=useState(null);
-  const _buildRows=(data)=>{const hd=["Cliente","Empresa","Ejec.Cobro","Owner CRM","Frec.Hist","Gap Esp.","Gap Actual","Prom/Mes","Ult.Fact","Meses Hist","Activos","Sub Prev","Accion CRM","# Cancel"];const rows=data.map(r=>{const x=_gx(r[0]);const emp=x?(_EM[x[0]]||""):"";const ej=x?_pn(x[1]):"";const ow=x?_pn(x[2]):"";const act=_TD[r[0]]||0;const sp=r[8]?"Si":"No";const cc=r[9]?"Cand.Cancel":"";const accion=r[10]===3?"BAJA DEF.":cc||(_CS[r[10]]||"");return[r[0],emp,ej,ow,r[2],r[3],r[4],r[5],r[6],r[7],act,sp,accion,r[11]];});return{hd,rows};};
+  const _buildRows=(data)=>{const hd=["Cliente","Books","Empresa","Ejec.Cobro","Owner CRM","Frec.Hist","Gap Esp.","Gap Actual","Prom/Mes","Ult.Fact","Meses Hist","Activos","Sub Prev","Accion CRM","# Cancel"];const rows=data.map(r=>{const x=_gx(r[0]);const books=x?"Si":"No";const emp=x?(_EM[x[0]]||""):"";const ej=x?_pn(x[1]):"";const ow=x?_pn(x[2]):"";const act=_TD[r[0]]||0;const sp=r[8]?"Si":"No";const cc=r[9]?"Cand.Cancel":"";const accion=r[10]===3?"BAJA DEF.":cc||(_CS[r[10]]||"");return[r[0],books,emp,ej,ow,r[2],r[3],r[4],r[5],r[6],r[7],act,sp,accion,r[11]];});return{hd,rows};};
   const dlCSV=()=>{const{hd,rows}=_buildRows(filtered);const esc=v=>{const s=String(v??"");return s.includes(",")||s.includes('"')||s.includes("\n")?'"'+s.replace(/"/g,'""')+'"':s;};setCsvData(hd.map(esc).join("\t")+"\n"+rows.map(r=>r.map(esc).join("\t")).join("\n"));};
   const dlExcel=()=>{const{hd,rows}=_buildRows(filtered);const ws=XLSX.utils.aoa_to_sheet([hd,...rows]);ws["!cols"]=hd.map((_,i)=>({wch:i===0?40:i===7?14:12}));const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Crear Suscripcion");XLSX.writeFile(wb,"crear_suscripcion.xlsx");};
   return (
