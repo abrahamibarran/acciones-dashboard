@@ -5,6 +5,9 @@ import * as XLSX from "xlsx";
 const NAVY = "#012750";
 const BLUE = "#245FA5";
 const ICE = "#E5EDF9";
+const MID_NAVY = "#1A3F6F";
+const CTA_BLUE = "#3B82F6";
+const GRAD = `linear-gradient(135deg, ${NAVY} 0%, ${BLUE} 100%)`;
 const API_URL = "https://nhcbakoxxaajymbkzcvg.supabase.co/functions/v1/acciones-data";
 
 let ACTIONS = {};
@@ -67,23 +70,26 @@ const _AC={label:"Accion CRM",fmt:(v,r)=>CndBdg(v,r)};
 
 const _TA={label:"Activos",align:"right",fmt:(v,r)=>{const t=_TD[r[0]];return t?<b>{t}</b>:<span style={{color:"#ccc"}}>0</span>;}};
 const _cSV={label:"Saldo Venc.",v:1,align:"right",fmt:(_,r)=>{const s=_SV[r[0]];return s?<span style={{padding:"2px 6px",borderRadius:4,fontSize:10,fontWeight:700,background:"#E74C3C18",color:"#E74C3C"}}>{fmt(s)}</span>:<span style={{fontSize:10,color:"#ccc"}}>&mdash;</span>;}};
-const Pgr=({p,tp,set})=>tp>1?<div style={{display:"flex",gap:6,justifyContent:"center",marginTop:10,alignItems:"center"}}><button onClick={()=>set(Math.max(0,p-1))} disabled={p===0} style={{padding:"4px 10px",borderRadius:6,border:"1px solid #ddd",background:p===0?"#f0f0f0":"#fff",cursor:p===0?"default":"pointer",fontSize:11}}>&laquo; Ant</button><span style={{fontSize:11,color:NAVY,fontWeight:600}}>Pag {p+1}/{tp}</span><button onClick={()=>set(Math.min(tp-1,p+1))} disabled={p>=tp-1} style={{padding:"4px 10px",borderRadius:6,border:"1px solid #ddd",background:p>=tp-1?"#f0f0f0":"#fff",cursor:p>=tp-1?"default":"pointer",fontSize:11}}>Sig &raquo;</button></div>:null;
+const Pgr=({p,tp,set})=>tp>1?<div style={{display:"flex",gap:8,justifyContent:"center",marginTop:12,alignItems:"center"}}><button onClick={()=>set(Math.max(0,p-1))} disabled={p===0} style={{padding:"5px 14px",borderRadius:20,border:"none",background:p===0?"#edf0f5":BLUE,color:p===0?"#aaa":"#fff",cursor:p===0?"default":"pointer",fontSize:11,fontWeight:600,transition:"all .2s",boxShadow:p===0?"none":"0 1px 4px rgba(36,95,165,.2)"}}>&laquo; Ant</button><span style={{fontSize:11,color:NAVY,fontWeight:700}}>Pág {p+1}/{tp}</span><button onClick={()=>set(Math.min(tp-1,p+1))} disabled={p>=tp-1} style={{padding:"5px 14px",borderRadius:20,border:"none",background:p>=tp-1?"#edf0f5":BLUE,color:p>=tp-1?"#aaa":"#fff",cursor:p>=tp-1?"default":"pointer",fontSize:11,fontWeight:600,transition:"all .2s",boxShadow:p>=tp-1?"none":"0 1px 4px rgba(36,95,165,.2)"}}>Sig &raquo;</button></div>:null;
 
 
 
 const TABS = ["Resumen","Revisar Suscripciones","Contratos Especiales","Crear Suscripcion","Reanudar/Renovar","Preventivos","Excluidos (Masters)","Escalar","Excluir (Parent)","Metodologia"];
 
-function KPI({label,value,sub,color}){return(<div style={{background:"#fff",borderRadius:10,padding:"14px 18px",boxShadow:"0 1px 4px rgba(0,0,0,.08)",borderLeft:`4px solid ${color||BLUE}`,minWidth:140}}><div style={{fontSize:11,color:"#666",textTransform:"uppercase",letterSpacing:.5}}>{label}</div><div style={{fontSize:22,fontWeight:700,color:color||NAVY,marginTop:2}}>{value}</div>{sub&&<div style={{fontSize:11,color:"#888",marginTop:2}}>{sub}</div>}</div>);}
+function KPI({label,value,sub,color}){return(<div
+  onMouseOver={e=>{e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="0 4px 16px rgba(1,39,80,.12)";}}
+  onMouseOut={e=>{e.currentTarget.style.transform="translateY(0)";e.currentTarget.style.boxShadow="0 2px 12px rgba(1,39,80,.07)";}}
+  style={{background:"#fff",borderRadius:12,padding:"16px 20px",boxShadow:"0 2px 12px rgba(1,39,80,.07)",borderLeft:`4px solid ${color||BLUE}`,minWidth:140,transition:"all .2s ease",cursor:"default"}}><div style={{fontSize:10,color:"#666",textTransform:"uppercase",letterSpacing:.6,fontWeight:600}}>{label}</div><div style={{fontSize:24,fontWeight:700,color:color||NAVY,marginTop:4}}>{value}</div>{sub&&<div style={{fontSize:11,color:"#888",marginTop:3}}>{sub}</div>}</div>);}
 
 function DataTable({columns,data,maxH,hideSearch}){
   const[sort,setSort]=useState({col:null,asc:true});const[search,setSearch]=useState("");
   const sorted=useMemo(()=>{let d=[...data];if(!hideSearch&&search){const s=search.toLowerCase();d=d.filter(r=>r.some(c=>String(c).toLowerCase().includes(s)));}if(sort.col!==null){const si=columns.slice(0,sort.col).filter(x=>!x.v).length;d.sort((a,b)=>{const va=a[si],vb=b[si];if(va==null)return 1;if(vb==null)return-1;return typeof va==="number"?(sort.asc?va-vb:vb-va):(sort.asc?String(va).localeCompare(String(vb)):String(vb).localeCompare(String(va)));});}return d;},[data,sort,search,hideSearch]);
   return(<div>
     {!hideSearch&&<input placeholder="Buscar..." value={search} onChange={e=>setSearch(e.target.value)} style={{padding:"6px 12px",border:"1px solid #ddd",borderRadius:6,marginBottom:8,width:220,fontSize:12}}/>}
-    <div style={{maxHeight:maxH||420,overflow:"auto",borderRadius:8,border:"1px solid #e0e0e0"}}>
+    <div style={{maxHeight:maxH||420,overflow:"auto",borderRadius:10,border:"1px solid #dde4ed",boxShadow:"0 1px 6px rgba(1,39,80,.05)"}}>
       <table style={{minWidth:900,borderCollapse:"collapse",fontSize:11}}>
-        <thead><tr>{columns.map((c,i)=><th key={i} onClick={()=>setSort({col:i,asc:sort.col===i?!sort.asc:true})} style={{position:"sticky",top:0,background:NAVY,color:"#fff",padding:"8px 6px",cursor:"pointer",textAlign:c.align||"left",whiteSpace:"nowrap",fontSize:10}}>{c.label}{sort.col===i?(sort.asc?" ▲":" ▼"):""}</th>)}</tr></thead>
-        <tbody>{sorted.map((r,ri)=><tr key={ri} style={{background:ri%2===0?"#fff":ICE}}>{columns.map((c,ci)=>{const di=columns.slice(0,ci).filter(x=>!x.v).length;return <td key={ci} style={{padding:"6px",borderBottom:"1px solid #f0f0f0",textAlign:c.align||"left",whiteSpace:"nowrap"}}>{c.fmt?c.fmt(r[di],r):r[di]}</td>;})}</tr>)}</tbody>
+        <thead><tr>{columns.map((c,i)=><th key={i} onClick={()=>setSort({col:i,asc:sort.col===i?!sort.asc:true})} style={{position:"sticky",top:0,background:GRAD,color:"#fff",padding:"9px 8px",cursor:"pointer",textAlign:c.align||"left",whiteSpace:"nowrap",fontSize:10,letterSpacing:.3,fontWeight:600}}>{c.label}{sort.col===i?(sort.asc?" ▲":" ▼"):""}</th>)}</tr></thead>
+        <tbody>{sorted.map((r,ri)=><tr key={ri} style={{background:ri%2===0?"#fff":"#F0F4FA",transition:"background .15s"}} onMouseOver={e=>e.currentTarget.style.background="#E8EEF6"} onMouseOut={e=>e.currentTarget.style.background=ri%2===0?"#fff":"#F0F4FA"}>{columns.map((c,ci)=>{const di=columns.slice(0,ci).filter(x=>!x.v).length;return <td key={ci} style={{padding:"7px 8px",borderBottom:"1px solid #edf0f5",textAlign:c.align||"left",whiteSpace:"nowrap"}}>{c.fmt?c.fmt(r[di],r):r[di]}</td>;})}</tr>)}</tbody>
       </table>
     </div>
     <div style={{fontSize:10,color:"#888",marginTop:4}}>{sorted.length} registros</div>
@@ -127,14 +133,14 @@ function TabResumen() {
         <strong>Criterios:</strong> Intervalo sub = frecuencia. next_billing = fuente de verdad. 25 masters excl. Sub Previa + Cand.Cancel + BAJA DEF.
       </div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}>
-        <div style={{background:"#fff",borderRadius:10,padding:16,boxShadow:"0 1px 4px rgba(0,0,0,.08)"}}>
-          <div style={{fontWeight:600,fontSize:13,color:NAVY,marginBottom:8}}>Distribucion por Categoria</div>
+        <div style={{background:"#fff",borderRadius:12,padding:18,boxShadow:"0 2px 12px rgba(1,39,80,.06)"}}>
+          <div style={{fontWeight:700,fontSize:13,color:NAVY,marginBottom:8,letterSpacing:.3}}>Distribución por Categoría</div>
           <ResponsiveContainer width="100%" height={240}>
             <PieChart><Pie data={pieData} cx="50%" cy="50%" outerRadius={90} dataKey="value" label={({name,value})=>`${name}: ${value}`} labelLine={false} fontSize={9}>{pieData.map((d,i)=><Cell key={i} fill={d.color}/>)}</Pie><Tooltip formatter={v=>v+" clientes"}/></PieChart>
           </ResponsiveContainer>
         </div>
-        <div style={{background:"#fff",borderRadius:10,padding:16,boxShadow:"0 1px 4px rgba(0,0,0,.08)"}}>
-          <div style={{fontWeight:600,fontSize:13,color:NAVY,marginBottom:8}}>Ingreso Mensual por Accion</div>
+        <div style={{background:"#fff",borderRadius:12,padding:18,boxShadow:"0 2px 12px rgba(1,39,80,.06)"}}>
+          <div style={{fontWeight:700,fontSize:13,color:NAVY,marginBottom:8,letterSpacing:.3}}>Ingreso Mensual por Acción</div>
           <ResponsiveContainer width="100%" height={240}>
             <BarChart data={barData} layout="vertical" margin={{left:100}}>
               <XAxis type="number" tickFormatter={fmtK} fontSize={10}/><YAxis type="category" dataKey="name" fontSize={9} width={95}/><Tooltip formatter={v=>fmt(v)}/>
@@ -143,12 +149,14 @@ function TabResumen() {
           </ResponsiveContainer>
         </div>
       </div>
-      <div style={{background:"#fff",borderRadius:10,padding:16,boxShadow:"0 1px 4px rgba(0,0,0,.08)"}}>
-        <div style={{fontWeight:600,fontSize:13,color:NAVY,marginBottom:10}}>Matriz de Acciones</div>
+      <div style={{background:"#fff",borderRadius:12,padding:18,boxShadow:"0 2px 12px rgba(1,39,80,.06)"}}>
+        <div style={{fontWeight:700,fontSize:13,color:NAVY,marginBottom:12,letterSpacing:.3}}>Matriz de Acciones</div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:10}}>
           {Object.entries(fA).map(([k,v])=>(
-            <div key={k} style={{display:"flex",gap:10,padding:10,borderRadius:8,border:`1px solid ${v.color}22`,background:`${v.color}08`}}>
-              <div style={{width:6,borderRadius:3,background:v.color,flexShrink:0}}/>
+            <div key={k} style={{display:"flex",gap:10,padding:12,borderRadius:10,border:`1px solid ${v.color}20`,background:`${v.color}06`,transition:"all .2s",cursor:"default"}}
+              onMouseOver={e=>{e.currentTarget.style.transform="translateY(-1px)";e.currentTarget.style.boxShadow=`0 3px 12px ${v.color}15`;}}
+              onMouseOut={e=>{e.currentTarget.style.transform="translateY(0)";e.currentTarget.style.boxShadow="none";}}>
+              <div style={{width:5,borderRadius:3,background:v.color,flexShrink:0}}/>
               <div>
                 <div style={{fontWeight:600,fontSize:12,color:v.color}}>{v.label}</div>
                 <div style={{fontSize:18,fontWeight:700,color:NAVY}}>{v.cnt} <span style={{fontSize:11,fontWeight:400,color:"#888"}}>clientes</span></div>
@@ -284,11 +292,12 @@ function TabCrearSub() {
       </div>}
 
       <input placeholder="Buscar cliente..." value={csSearch} onChange={e => { setCsSearch(e.target.value); setPage(0); }} style={{ padding: "6px 12px", border: "1px solid #ddd", borderRadius: 6, marginBottom: 8, width: 260, fontSize: 12 }} />
-      <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:6,flexWrap:"wrap"}}>
-        <span style={{fontSize:10,fontWeight:700,color:NAVY}}>CRM:</span>
-        {crmOpts.map(o=><button key={o} onClick={()=>{setCrmFilter(o);setPage(0);}} style={{padding:"3px 8px",borderRadius:5,border:crmFilter===o?`2px solid ${NAVY}`:"1px solid #ddd",background:crmFilter===o?NAVY:"#fff",color:crmFilter===o?"#fff":NAVY,fontSize:10,fontWeight:600,cursor:"pointer"}}>{o}</button>)}
-        <span style={{fontSize:10,fontWeight:700,color:"#2980B9",marginLeft:8}}>Sub:</span>
-        {subOpts.map(o=><button key={o} onClick={()=>{setSubFilter(o);setPage(0);}} style={{padding:"3px 8px",borderRadius:5,border:subFilter===o?"2px solid #2980B9":"1px solid #ddd",background:subFilter===o?"#2980B9":"#fff",color:subFilter===o?"#fff":"#2980B9",fontSize:10,fontWeight:600,cursor:"pointer"}}>{o}</button>)}
+      <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:8,flexWrap:"wrap"}}>
+        <span style={{fontSize:10,fontWeight:700,color:NAVY,letterSpacing:.4}}>CRM:</span>
+        {crmOpts.map(o=><button key={o} onClick={()=>{setCrmFilter(o);setPage(0);}} style={{padding:"4px 10px",borderRadius:20,border:crmFilter===o?"none":"1px solid #dde4ed",background:crmFilter===o?NAVY:"#fff",color:crmFilter===o?"#fff":MID_NAVY,fontSize:10,fontWeight:600,cursor:"pointer",transition:"all .2s",boxShadow:crmFilter===o?"0 1px 4px rgba(1,39,80,.2)":"none"}}>{o}</button>)}
+        <div style={{width:1,height:18,background:"#dde4ed",margin:"0 4px"}}/>
+        <span style={{fontSize:10,fontWeight:700,color:"#2980B9",letterSpacing:.4}}>Sub:</span>
+        {subOpts.map(o=><button key={o} onClick={()=>{setSubFilter(o);setPage(0);}} style={{padding:"4px 10px",borderRadius:20,border:subFilter===o?"none":"1px solid #dde4ed",background:subFilter===o?"#2980B9":"#fff",color:subFilter===o?"#fff":"#2980B9",fontSize:10,fontWeight:600,cursor:"pointer",transition:"all .2s",boxShadow:subFilter===o?"0 1px 4px rgba(41,128,185,.3)":"none"}}>{o}</button>)}
       </div>
       <div style={{background:"#FEF9E7",border:"1px solid #F9E79F",borderRadius:8,padding:8,marginBottom:8,fontSize:11}}>
         <b>Cand.Cancel:</b> Mens&gt;4m, Bim&gt;4m, Trim&gt;6m, Sem&gt;7m, Anual&gt;13m.
@@ -363,7 +372,7 @@ function TabExcluidos() {
       <KPI label="Prom/Mes" value={fmtK(filtered.reduce((s,r)=>s+r[4],0))} color="#2980B9"/>
     </div>
     <div style={{display:"flex",gap:6,marginBottom:10,flexWrap:"wrap"}}>
-      {opts.map(o=><button key={o} onClick={()=>setTf(o)} style={{padding:"3px 10px",borderRadius:6,border:"1px solid "+(tf===o?BLUE:"#ddd"),background:tf===o?BLUE:"#fff",color:tf===o?"#fff":"#444",fontSize:11,cursor:"pointer"}}>{o}</button>)}
+      {opts.map(o=><button key={o} onClick={()=>setTf(o)} style={{padding:"4px 12px",borderRadius:20,border:tf===o?"none":"1px solid #dde4ed",background:tf===o?BLUE:"#fff",color:tf===o?"#fff":MID_NAVY,fontSize:10,fontWeight:600,cursor:"pointer",transition:"all .2s",boxShadow:tf===o?"0 1px 4px rgba(36,95,165,.3)":"none"}}>{o}</button>)}
     </div>
     <DataTable columns={cols} data={filtered}/>
   </div>);
@@ -428,36 +437,55 @@ export default function AccionesClientes({ userEmail, onLogout }) {
     }).catch(e => console.error('Error loading data:', e));
   }, []);
   if (!loaded) return (
-    <div style={{ fontFamily: "'Montserrat', sans-serif", background: "#F4F6FA", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+    <div style={{ fontFamily: "'Montserrat', sans-serif", background: GRAD, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
       <div style={{ textAlign: "center" }}>
-        <div style={{ fontSize: 24, fontWeight: 700, color: "#012750", marginBottom: 8 }}>Cargando datos...</div>
-        <div style={{ fontSize: 13, color: "#888" }}>Consultando Supabase</div>
+        <div style={{width:56,height:56,borderRadius:14,background:"rgba(255,255,255,.12)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px"}}>
+          <span style={{color:"#fff",fontSize:28,fontWeight:800}}>N</span>
+        </div>
+        <div style={{ fontSize: 20, fontWeight: 700, color: "#fff", marginBottom: 6 }}>Cargando datos...</div>
+        <div style={{ fontSize: 12, color: "rgba(255,255,255,.6)" }}>Consultando Supabase</div>
       </div>
     </div>
   );
   return (
     <div style={{ fontFamily: "'Montserrat', 'Segoe UI', sans-serif", background: "#F4F6FA", minHeight: "100vh", padding: 20 }}>
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-        <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:18}}>
-          <div style={{width:40,height:40,borderRadius:10,background:`linear-gradient(135deg,${NAVY},${BLUE})`,display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{color:"#fff",fontSize:18,fontWeight:700}}>N</span></div>
+        <div style={{background:GRAD,borderRadius:14,padding:"16px 24px",marginBottom:18,display:"flex",alignItems:"center",gap:16,boxShadow:"0 4px 20px rgba(1,39,80,.18)"}}>
+          <svg width="38" height="38" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="120" height="120" rx="16" fill="rgba(255,255,255,.12)"/>
+            <text x="60" y="78" textAnchor="middle" fontFamily="Montserrat,sans-serif" fontSize="56" fontWeight="800" fill="#fff">N</text>
+          </svg>
           <div style={{flex:1}}>
-            <div style={{fontSize:18,fontWeight:700,color:NAVY}}>Plan de Acciones - Clientes sin Facturacion</div>
-            <div style={{fontSize:11,color:"#888"}}>27 masters excluidos | Filtro: ACTIVO + Cliente | ${new Date().toLocaleDateString('es-MX')}</div>
+            <div style={{fontSize:19,fontWeight:700,color:"#fff",letterSpacing:.3}}>Plan de Acciones — Clientes sin Facturación</div>
+            <div style={{fontSize:11,color:"rgba(255,255,255,.65)",marginTop:2}}>27 masters excluidos · Filtro: ACTIVO + Cliente · {new Date().toLocaleDateString('es-MX')}</div>
           </div>
-          {userEmail && <div style={{display:"flex",alignItems:"center",gap:8}}>
-            <span style={{fontSize:11,color:"#888"}}>{userEmail}</span>
-            <button onClick={onLogout} style={{padding:"5px 12px",borderRadius:6,border:"1px solid #ddd",background:"#fff",color:"#666",fontSize:11,cursor:"pointer",fontWeight:600}}>Salir</button>
+          {userEmail && <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <span style={{fontSize:11,color:"rgba(255,255,255,.7)"}}>{userEmail}</span>
+            <button onClick={onLogout}
+              onMouseOver={e=>{e.currentTarget.style.background="rgba(255,255,255,.25)";}}
+              onMouseOut={e=>{e.currentTarget.style.background="rgba(255,255,255,.12)";}}
+              style={{padding:"6px 14px",borderRadius:20,border:"1px solid rgba(255,255,255,.25)",background:"rgba(255,255,255,.12)",color:"#fff",fontSize:11,cursor:"pointer",fontWeight:600,transition:"all .2s"}}>Salir</button>
           </div>}
         </div>
-        <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:10,flexWrap:"wrap"}}>
-          <span style={{fontSize:10,fontWeight:700,color:NAVY}}>Empresa:</span>
-          {_EMP_OPTS.map(o=><button key={o} onClick={()=>setEmpFilt(o)} style={{padding:"3px 10px",borderRadius:6,border:empFilt===o?`2px solid ${BLUE}`:"1px solid #ddd",background:empFilt===o?BLUE:"#fff",color:empFilt===o?"#fff":NAVY,fontSize:10,fontWeight:600,cursor:"pointer"}}>{o}</button>)}
-          <span style={{fontSize:10,fontWeight:700,color:"#27AE60",marginLeft:12}}>Books:</span>
-          {_BOOKS_OPTS.map(o=><button key={o} onClick={()=>setBooksFilt(o)} style={{padding:"3px 10px",borderRadius:6,border:booksFilt===o?"2px solid #27AE60":"1px solid #ddd",background:booksFilt===o?"#27AE60":"#fff",color:booksFilt===o?"#fff":"#333",fontSize:10,fontWeight:600,cursor:"pointer"}}>{o}</button>)}
+        <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:12,flexWrap:"wrap",padding:"8px 12px",background:"#fff",borderRadius:12,boxShadow:"0 1px 4px rgba(1,39,80,.05)"}}>
+          <span style={{fontSize:10,fontWeight:700,color:NAVY,letterSpacing:.4}}>Empresa:</span>
+          {_EMP_OPTS.map(o=><button key={o} onClick={()=>setEmpFilt(o)}
+            onMouseOver={e=>{if(empFilt!==o)e.currentTarget.style.background="#EDF1F7";}}
+            onMouseOut={e=>{if(empFilt!==o)e.currentTarget.style.background="#fff";}}
+            style={{padding:"4px 12px",borderRadius:20,border:empFilt===o?"none":"1px solid #dde4ed",background:empFilt===o?BLUE:"#fff",color:empFilt===o?"#fff":MID_NAVY,fontSize:10,fontWeight:600,cursor:"pointer",transition:"all .2s",boxShadow:empFilt===o?"0 1px 4px rgba(36,95,165,.3)":"none"}}>{o}</button>)}
+          <div style={{width:1,height:18,background:"#dde4ed",margin:"0 6px"}}/>
+          <span style={{fontSize:10,fontWeight:700,color:"#27AE60",letterSpacing:.4}}>Books:</span>
+          {_BOOKS_OPTS.map(o=><button key={o} onClick={()=>setBooksFilt(o)}
+            onMouseOver={e=>{if(booksFilt!==o)e.currentTarget.style.background="#E8F8F0";}}
+            onMouseOut={e=>{if(booksFilt!==o)e.currentTarget.style.background="#fff";}}
+            style={{padding:"4px 12px",borderRadius:20,border:booksFilt===o?"none":"1px solid #dde4ed",background:booksFilt===o?"#27AE60":"#fff",color:booksFilt===o?"#fff":"#333",fontSize:10,fontWeight:600,cursor:"pointer",transition:"all .2s",boxShadow:booksFilt===o?"0 1px 4px rgba(39,174,96,.3)":"none"}}>{o}</button>)}
         </div>
-        <div style={{ display: "flex", gap: 4, marginBottom: 16, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 5, marginBottom: 16, flexWrap: "wrap", background:"#fff", padding:"6px", borderRadius:16, boxShadow:"0 1px 6px rgba(1,39,80,.06)" }}>
           {TABS.map((t, i) => (
-            <button key={i} onClick={() => setTab(i)} style={{ padding: "8px 16px", borderRadius: 8, border: "none", background: tab === i ? NAVY : "#fff", color: tab === i ? "#fff" : NAVY, fontWeight: tab === i ? 700 : 500, fontSize: 12, cursor: "pointer", boxShadow: tab === i ? "0 2px 6px rgba(0,0,0,.15)" : "0 1px 3px rgba(0,0,0,.06)" }}>{t}</button>
+            <button key={i} onClick={() => setTab(i)}
+              onMouseOver={e=>{if(tab!==i)e.currentTarget.style.background="#EDF1F7";}}
+              onMouseOut={e=>{if(tab!==i)e.currentTarget.style.background="transparent";}}
+              style={{ padding: "8px 16px", borderRadius: 20, border: "none", background: tab === i ? GRAD : "transparent", color: tab === i ? "#fff" : MID_NAVY, fontWeight: tab === i ? 700 : 500, fontSize: 11, cursor: "pointer", transition:"all .2s ease", boxShadow: tab === i ? "0 2px 8px rgba(1,39,80,.18)" : "none", letterSpacing:.2 }}>{t}</button>
           ))}
         </div>
         <EmpCtx.Provider value={empFilt}>
@@ -474,7 +502,7 @@ export default function AccionesClientes({ userEmail, onLogout }) {
         {tab === 9 && <TabMetodologia />}
         </BooksCtx.Provider>
         </EmpCtx.Provider>
-        <div style={{ textAlign: "center", fontSize: 10, color: "#bbb", marginTop: 20, padding: 10 }}>Numaris | Supabase (Zoho Books + Billing + CRM)</div>
+        <div style={{ textAlign: "center", fontSize: 10, color: "rgba(255,255,255,.7)", marginTop: 24, padding: "14px 0", background: GRAD, borderRadius: 10 }}>Numaris · Dashboard de Cobranza · Supabase (Zoho Books + Billing + CRM)</div>
       </div>
     </div>
   );

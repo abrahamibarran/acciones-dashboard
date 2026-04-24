@@ -52,12 +52,14 @@ function App() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "#012750",
+        background: "linear-gradient(135deg, #012750 0%, #245FA5 100%)",
         color: "#fff",
         fontFamily: "'Montserrat', sans-serif",
-        fontSize: 16,
+        fontSize: 15,
+        fontWeight: 600,
+        letterSpacing: .3,
       }}>
-        Verificando sesion...
+        Verificando sesión...
       </div>
     );
   }

@@ -1,6 +1,8 @@
 import { supabase } from "./supabaseClient";
 
 const NAVY = "#012750";
+const BLUE = "#245FA5";
+const GRAD = `linear-gradient(135deg, ${NAVY} 0%, ${BLUE} 100%)`;
 
 export default function Login({ error }) {
   const handleLogin = async () => {
@@ -20,34 +22,37 @@ export default function Login({ error }) {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      background: "linear-gradient(135deg, #012750 0%, #245FA5 100%)",
+      background: GRAD,
       fontFamily: "'Montserrat', sans-serif",
     }}>
       <div style={{
         background: "#fff",
-        borderRadius: 16,
-        padding: "48px 40px",
-        boxShadow: "0 8px 32px rgba(0,0,0,.18)",
+        borderRadius: 20,
+        padding: "52px 44px",
+        boxShadow: "0 12px 40px rgba(0,0,0,.22)",
         textAlign: "center",
         maxWidth: 400,
         width: "90%",
       }}>
-        <div style={{ fontSize: 32, fontWeight: 800, color: NAVY, marginBottom: 4 }}>
+        <div style={{width:56,height:56,borderRadius:14,background:GRAD,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px",boxShadow:"0 4px 16px rgba(1,39,80,.2)"}}>
+          <span style={{color:"#fff",fontSize:28,fontWeight:800}}>N</span>
+        </div>
+        <div style={{ fontSize: 28, fontWeight: 800, color: NAVY, marginBottom: 2, letterSpacing: -.3 }}>
           Acciones CRM
         </div>
-        <div style={{ fontSize: 13, color: "#666", marginBottom: 32 }}>
+        <div style={{ fontSize: 12, color: "#888", marginBottom: 32 }}>
           Dashboard de Cobranza &mdash; Numaris
         </div>
 
         {error && (
           <div style={{
-            background: "#FDEDEE",
-            border: "1px solid #E74C3C",
-            borderRadius: 8,
+            background: "#FEF2F2",
+            border: "1px solid #FECACA",
+            borderRadius: 10,
             padding: "10px 14px",
             marginBottom: 20,
             fontSize: 12,
-            color: "#C0392B",
+            color: "#DC2626",
             fontWeight: 600,
           }}>
             {error}
@@ -62,18 +67,18 @@ export default function Login({ error }) {
             justifyContent: "center",
             gap: 10,
             width: "100%",
-            padding: "12px 20px",
-            borderRadius: 8,
-            border: "1px solid #ddd",
+            padding: "13px 20px",
+            borderRadius: 12,
+            border: "1px solid #e5e7eb",
             background: "#fff",
             fontSize: 14,
             fontWeight: 600,
             color: "#333",
             cursor: "pointer",
-            transition: "box-shadow .2s",
+            transition: "all .2s",
           }}
-          onMouseOver={e => e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,.12)"}
-          onMouseOut={e => e.currentTarget.style.boxShadow = "none"}
+          onMouseOver={e => {e.currentTarget.style.boxShadow = "0 4px 14px rgba(0,0,0,.1)";e.currentTarget.style.borderColor="#d1d5db";}}
+          onMouseOut={e => {e.currentTarget.style.boxShadow = "none";e.currentTarget.style.borderColor="#e5e7eb";}}
         >
           <svg width="20" height="20" viewBox="0 0 48 48">
             <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
@@ -81,11 +86,11 @@ export default function Login({ error }) {
             <path fill="#FBBC05" d="M10.53 28.59A14.5 14.5 0 019.5 24c0-1.59.28-3.14.76-4.59l-7.98-6.19A23.97 23.97 0 000 24c0 3.77.9 7.35 2.56 10.54l7.97-5.95z"/>
             <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 5.95C6.51 42.62 14.62 48 24 48z"/>
           </svg>
-          Iniciar sesion con Google
+          Iniciar sesión con Google
         </button>
 
-        <div style={{ fontSize: 11, color: "#999", marginTop: 20 }}>
-          Solo cuentas <strong>@numaris.com</strong>
+        <div style={{ fontSize: 11, color: "#aaa", marginTop: 24 }}>
+          Solo cuentas <strong style={{color:"#888"}}>@numaris.com</strong>
         </div>
       </div>
     </div>
