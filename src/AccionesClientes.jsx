@@ -438,8 +438,11 @@ function TabMetodologia() {
       </div>
       <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:8}}>
         {pill("#EBF5FB","#2471A3","account_type = Cliente")}
-        {pill("#EBF5FB","#2471A3","status = ACTIVO")}
+        {pill("#EBF5FB","#2471A3","status = ACTIVO (CON FACT. ÚLTIMOS 15 MESES)")}
         {pill("#FEF9E7","#B7950B","Sin factura en el mes actual")}
+      </div>
+      <div style={{...body,marginTop:8,padding:"6px 10px",background:"#FEF9E7",borderRadius:6,border:"1px solid #F9E79F"}}>
+        <b>Importante:</b> Solo se incluyen cuentas con status <code style={{background:"#f0f4f8",padding:"1px 4px",borderRadius:3,fontSize:10}}>ACTIVO (CON FACTURACIÓN EN LOS ÚLTIMOS 15 MESES)</code>. Cuentas INACTIVAS, BAJA DEFINITIVA, DEMO y LEAD quedan excluidas automáticamente. Los datos se recargan cada vez que regresas al dashboard.
       </div>
       <div style={sub}>Fuentes de datos</div>
       <div style={body}>
@@ -562,9 +565,13 @@ function TabMetodologia() {
 export default function AccionesClientes({ userEmail, onLogout }) {
   const [tab, setTab] = useState(0);
   const [loaded, setLoaded] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastUpdate, setLastUpdate] = useState(null);
   const [empFilt, setEmpFilt] = useState("Todas");
   const [booksFilt, setBooksFilt] = useState("Todos");
-  useEffect(() => {
+
+  const loadData = (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
     fetch(API_URL).then(r => r.json()).then(d => {
       ACTIONS = d.ACTIONS; RC_STD = d.RC_STD; RC_ESP = d.RC_ESP;
       CS = d.CS; CSP = d.CSP; RR = d.RR; EXC = d.EXC;
@@ -572,8 +579,19 @@ export default function AccionesClientes({ userEmail, onLogout }) {
       _O = d._O; _OX = d._OX;
       BAJA_DATES = d.BAJA_DATES; _TD = d._TD; _XD = d._XD; _EC = d._EC || {}; _AD = d._AD; _SV = d._SV || {};
       setLoaded(true);
-    }).catch(e => console.error('Error loading data:', e));
-  }, []);
+      setRefreshing(false);
+      setLastUpdate(new Date());
+    }).catch(e => { console.error('Error loading data:', e); setRefreshing(false); });
+  };
+
+  useEffect(() => { loadData(); }, []);
+
+  // Auto-refresh cuando el usuario regresa a la pestaña
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === 'visible' && loaded) loadData(true); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [loaded]);
   if (!loaded) return (
     <div style={{ fontFamily: "'Montserrat', sans-serif", background: GRAD, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
       <div style={{ textAlign: "center" }}>
@@ -595,15 +613,29 @@ export default function AccionesClientes({ userEmail, onLogout }) {
           </svg>
           <div style={{flex:1}}>
             <div style={{fontSize:19,fontWeight:700,color:"#fff",letterSpacing:.3}}>Plan de Acciones — Clientes sin Facturación</div>
-            <div style={{fontSize:11,color:"rgba(255,255,255,.65)",marginTop:2}}>27 masters excluidos · Filtro: ACTIVO + Cliente · {new Date().toLocaleDateString('es-MX')}</div>
+            <div style={{fontSize:11,color:"rgba(255,255,255,.65)",marginTop:2,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+              <span style={{padding:"2px 8px",borderRadius:10,background:"rgba(39,174,96,.25)",color:"#A3E4D7",fontSize:9,fontWeight:700}}>ACTIVO (CON FACT. 15 MESES)</span>
+              <span>·</span>
+              <span>{new Date().toLocaleDateString('es-MX')}</span>
+              {lastUpdate && <><span>·</span><span>Datos: {lastUpdate.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'})}</span></>}
+              {refreshing && <span style={{fontSize:9,opacity:.8}}>⟳ Actualizando...</span>}
+            </div>
           </div>
-          {userEmail && <div style={{display:"flex",alignItems:"center",gap:10}}>
-            <span style={{fontSize:11,color:"rgba(255,255,255,.7)"}}>{userEmail}</span>
-            <button onClick={onLogout}
-              onMouseOver={e=>{e.currentTarget.style.background="rgba(255,255,255,.25)";}}
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <button onClick={()=>loadData(true)} disabled={refreshing}
+              onMouseOver={e=>{if(!refreshing)e.currentTarget.style.background="rgba(255,255,255,.25)";}}
               onMouseOut={e=>{e.currentTarget.style.background="rgba(255,255,255,.12)";}}
-              style={{padding:"6px 14px",borderRadius:20,border:"1px solid rgba(255,255,255,.25)",background:"rgba(255,255,255,.12)",color:"#fff",fontSize:11,cursor:"pointer",fontWeight:600,transition:"all .2s"}}>Salir</button>
-          </div>}
+              style={{padding:"6px 12px",borderRadius:20,border:"1px solid rgba(255,255,255,.25)",background:"rgba(255,255,255,.12)",color:"#fff",fontSize:11,cursor:refreshing?"default":"pointer",fontWeight:600,transition:"all .2s",opacity:refreshing?.5:1}}>
+              {refreshing?"⟳ ...":"⟳ Actualizar"}
+            </button>
+            {userEmail && <>
+              <span style={{fontSize:11,color:"rgba(255,255,255,.7)"}}>{userEmail}</span>
+              <button onClick={onLogout}
+                onMouseOver={e=>{e.currentTarget.style.background="rgba(255,255,255,.25)";}}
+                onMouseOut={e=>{e.currentTarget.style.background="rgba(255,255,255,.12)";}}
+                style={{padding:"6px 14px",borderRadius:20,border:"1px solid rgba(255,255,255,.25)",background:"rgba(255,255,255,.12)",color:"#fff",fontSize:11,cursor:"pointer",fontWeight:600,transition:"all .2s"}}>Salir</button>
+            </>}
+          </div>
         </div>
         <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:12,flexWrap:"wrap",padding:"8px 12px",background:"#fff",borderRadius:12,boxShadow:"0 1px 4px rgba(1,39,80,.05)"}}>
           <span style={{fontSize:10,fontWeight:700,color:NAVY,letterSpacing:.4}}>Empresa:</span>
